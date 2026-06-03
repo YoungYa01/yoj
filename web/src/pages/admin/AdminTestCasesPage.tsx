@@ -91,7 +91,7 @@ export default function AdminTestCasesPage() {
 
         try {
             if (editing) {
-                await request(`/admin/problems/${id}/test-cases/${editing.id}`, {
+                await request(`/admin/test-cases/${editing.id}`, {
                     method: "PUT",
                     body: JSON.stringify(payload)
                 });

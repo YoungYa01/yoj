@@ -1,422 +1,262 @@
 package main
 
 import (
-	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
-	"regexp"
 	"strings"
-	"unicode/utf8"
+	"time"
 
 	"github.com/yoj/yoj/server/internal/config"
-	"github.com/yoj/yoj/server/internal/database"
 	"github.com/yoj/yoj/server/internal/model"
+	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
 type sourceProblem struct {
-	Title             string
-	Slug              string
-	Difficulty        string
-	Tags              []string
-	Description       string
-	InputDescription  string
-	OutputDescription string
-	Hint              string
-	TestCases         []sourceTestCase
+	Title             string           `json:"title"`
+	Slug              string           `json:"slug"`
+	Difficulty        string           `json:"difficulty"`
+	Tags              []string         `json:"tags"`
+	Description       string           `json:"description"`
+	InputDescription  string           `json:"input_description"`
+	OutputDescription string           `json:"output_description"`
+	Hint              string           `json:"hint"`
+	TimeLimitMS       int              `json:"time_limit_ms"`
+	MemoryLimitMB     int              `json:"memory_limit_mb"`
+	IsPublished       bool             `json:"is_published"`
+	TestCases         []sourceTestCase `json:"test_cases"`
 }
 
 type sourceTestCase struct {
-	Input  string
-	Output string
+	Input          string `json:"input"`
+	ExpectedOutput string `json:"expected_output"`
+	IsSample       bool   `json:"is_sample"`
+	SortOrder      int    `json:"sort_order"`
 }
-
-type importStats struct {
-	Created   int
-	Updated   int
-	Problems  int
-	TestCases int
-}
-
-var testCasePattern = regexp.MustCompile(`"input"\s*:\s*"(.*?)"\s*,\s*"output"\s*:\s*"(.*?)"`)
 
 func main() {
-	var filePath string
-	var dryRun bool
-	flag.StringVar(&filePath, "file", "", "path to the markdown problem set")
-	flag.BoolVar(&dryRun, "dry-run", false, "parse and validate only")
+	file := flag.String("file", "../data/yoj_cleaned_problems.json", "cleaned problem json file")
+	dryRun := flag.Bool("dry-run", false, "parse and validate only; do not write database")
+	onlySlug := flag.String("only-slug", "", "import only one problem by slug")
 	flag.Parse()
 
-	if strings.TrimSpace(filePath) == "" {
-		resolved, err := defaultProblemSetPath()
-		if err != nil {
-			log.Fatalf("resolve problem set path: %v", err)
-		}
-		filePath = resolved
-	}
-
-	problems, err := parseProblemSet(filePath)
+	problems, err := readProblems(*file)
 	if err != nil {
-		log.Fatalf("parse problem set: %v", err)
-	}
-	stats := importStats{Problems: len(problems)}
-	for _, problem := range problems {
-		stats.TestCases += len(problem.TestCases)
+		log.Fatal(err)
 	}
 
-	if dryRun {
-		log.Printf("parsed %d problems and %d test cases from %s", stats.Problems, stats.TestCases, filePath)
+	if *onlySlug != "" {
+		filtered := make([]sourceProblem, 0, 1)
+		for _, problem := range problems {
+			if problem.Slug == *onlySlug {
+				filtered = append(filtered, problem)
+			}
+		}
+		problems = filtered
+	}
+
+	if err := validateProblems(problems); err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("loaded %d problems from %s", len(problems), *file)
+
+	if *dryRun {
+		log.Println("dry-run passed; database was not modified")
 		return
 	}
 
 	cfg := config.Load()
-	ctx := context.Background()
-	db, err := database.Connect(ctx, cfg)
+	db, err := gorm.Open(mysql.Open(cfg.DSN()), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("connect database: %v", err)
-	}
-	if err := model.AutoMigrate(db); err != nil {
-		log.Fatalf("migrate database: %v", err)
+		log.Fatalf("connect database failed: %v", err)
 	}
 
-	stats, err = importProblems(db, problems)
-	if err != nil {
-		log.Fatalf("import problems: %v", err)
-	}
-	log.Printf("import finished: %d created, %d updated, %d problems, %d test cases", stats.Created, stats.Updated, stats.Problems, stats.TestCases)
-}
+	start := time.Now()
+	var created, updated int
 
-func defaultProblemSetPath() (string, error) {
-	candidates := []string{
-		"OJ系统题目集（50道基础题）.md",
-		filepath.Join("..", "OJ系统题目集（50道基础题）.md"),
-	}
-	for _, candidate := range candidates {
-		if _, err := os.Stat(candidate); err == nil {
-			return candidate, nil
+	for index, problem := range problems {
+		wasCreated, err := importProblem(db, problem)
+		if err != nil {
+			log.Fatalf("import %s failed: %v", problem.Slug, err)
 		}
+		if wasCreated {
+			created++
+		} else {
+			updated++
+		}
+		log.Printf("[%d/%d] imported %s", index+1, len(problems), problem.Slug)
 	}
 
-	matches, err := filepath.Glob("OJ*.md")
-	if err == nil && len(matches) > 0 {
-		return matches[0], nil
-	}
-	matches, err = filepath.Glob(filepath.Join("..", "OJ*.md"))
-	if err == nil && len(matches) > 0 {
-		return matches[0], nil
-	}
-	return "", errors.New("problem set markdown was not found")
+	log.Printf("done: created=%d updated=%d elapsed=%s", created, updated, time.Since(start).Round(time.Millisecond))
 }
 
-func parseProblemSet(filePath string) ([]sourceProblem, error) {
-	raw, err := os.ReadFile(filePath)
+func readProblems(file string) ([]sourceProblem, error) {
+	content, err := os.ReadFile(file)
 	if err != nil {
 		return nil, err
 	}
-	if !utf8.Valid(raw) {
-		return nil, errors.New("problem set file is not valid UTF-8")
+
+	var problems []sourceProblem
+	if err := json.Unmarshal(content, &problems); err != nil {
+		return nil, err
 	}
 
-	lines := strings.Split(string(raw), "\n")
-	problems := make([]sourceProblem, 0, 50)
-	var current *sourceProblem
-	inTestCases := false
-
-	flush := func() error {
-		if current == nil {
-			return nil
-		}
-		if err := validateProblem(*current); err != nil {
-			return err
-		}
-		problems = append(problems, *current)
-		current = nil
-		return nil
-	}
-
-	for lineNumber, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#") || line == `\[` || line == `\]` {
-			continue
-		}
-
-		if line == `\{` {
-			if current != nil {
-				return nil, fmt.Errorf("line %d: nested problem object", lineNumber+1)
-			}
-			current = &sourceProblem{Difficulty: "Easy"}
-			inTestCases = false
-			continue
-		}
-		if current == nil {
-			continue
-		}
-		if line == `\},` || line == `\}` {
-			if err := flush(); err != nil {
-				return nil, fmt.Errorf("line %d: %w", lineNumber+1, err)
-			}
-			inTestCases = false
-			continue
-		}
-		if line == `\]` {
-			inTestCases = false
-			continue
-		}
-
-		if strings.HasPrefix(line, `"test\_cases"`) || strings.HasPrefix(line, `"test_cases"`) {
-			inTestCases = true
-			continue
-		}
-
-		if inTestCases {
-			if strings.HasPrefix(line, `\]`) {
-				inTestCases = false
-				continue
-			}
-			tc, ok := parseTestCaseLine(line)
-			if !ok {
-				return nil, fmt.Errorf("line %d: invalid test case line", lineNumber+1)
-			}
-			current.TestCases = append(current.TestCases, tc)
-			continue
-		}
-
-		key, value, ok := parseFieldLine(line)
-		if !ok {
-			return nil, fmt.Errorf("line %d: invalid field line", lineNumber+1)
-		}
-		switch key {
-		case "title":
-			current.Title = value
-		case "slug":
-			current.Slug = value
-		case "difficulty":
-			current.Difficulty = value
-		case "tags":
-			current.Tags = splitTags(value)
-		case "description":
-			current.Description = value
-		case "input_format":
-			current.InputDescription = value
-		case "output_format":
-			current.OutputDescription = value
-		case "hint":
-			current.Hint = value
-		default:
-			return nil, fmt.Errorf("line %d: unsupported field %q", lineNumber+1, key)
-		}
-	}
-
-	if current != nil {
-		if err := flush(); err != nil {
-			return nil, err
-		}
-	}
-	if len(problems) == 0 {
-		return nil, errors.New("no problems found")
-	}
 	return problems, nil
 }
 
-func parseFieldLine(line string) (string, string, bool) {
-	separator := strings.Index(line, ":")
-	if separator < 0 {
-		return "", "", false
+func validateProblems(problems []sourceProblem) error {
+	if len(problems) == 0 {
+		return errors.New("no problems to import")
 	}
-	key := strings.TrimSpace(line[:separator])
-	value := strings.TrimSpace(line[separator+1:])
-	value = strings.TrimSuffix(value, ",")
 
-	key = strings.Trim(key, `"`)
-	key = markdownUnescape(key)
-	if !strings.HasPrefix(value, `"`) || !strings.HasSuffix(value, `"`) {
-		return "", "", false
-	}
-	value = strings.TrimPrefix(value, `"`)
-	value = strings.TrimSuffix(value, `"`)
-	return key, markdownUnescape(value), true
-}
-
-func parseTestCaseLine(line string) (sourceTestCase, bool) {
-	matches := testCasePattern.FindStringSubmatch(line)
-	if len(matches) != 3 {
-		return sourceTestCase{}, false
-	}
-	return sourceTestCase{
-		Input:  markdownUnescape(matches[1]),
-		Output: markdownUnescape(matches[2]),
-	}, true
-}
-
-func markdownUnescape(value string) string {
-	replacer := strings.NewReplacer(
-		`\\n`, "\n",
-		`\\t`, "\t",
-		`\[`, `[`,
-		`\]`, `]`,
-		`\{`, `{`,
-		`\}`, `}`,
-		`\_`, `_`,
-		`\+`, `+`,
-		`\-`, `-`,
-		`\!`, `!`,
-		`\#`, `#`,
-		`\<`, `<`,
-		`\>`, `>`,
-	)
-	return replacer.Replace(value)
-}
-
-func splitTags(value string) []string {
 	seen := map[string]bool{}
-	parts := strings.FieldsFunc(value, func(r rune) bool {
-		return r == ',' || r == '，' || r == ';' || r == '；'
-	})
-	tags := make([]string, 0, len(parts))
-	for _, part := range parts {
-		tag := strings.TrimSpace(part)
-		if tag == "" || seen[tag] {
-			continue
-		}
-		seen[tag] = true
-		tags = append(tags, tag)
-	}
-	return tags
-}
 
-func validateProblem(problem sourceProblem) error {
-	switch {
-	case strings.TrimSpace(problem.Title) == "":
-		return errors.New("title is required")
-	case strings.TrimSpace(problem.Slug) == "":
-		return fmt.Errorf("problem %q slug is required", problem.Title)
-	case strings.TrimSpace(problem.Description) == "":
-		return fmt.Errorf("problem %q description is required", problem.Title)
-	case len(problem.TestCases) == 0:
-		return fmt.Errorf("problem %q has no test cases", problem.Title)
-	}
-	for index, tc := range problem.TestCases {
-		if strings.TrimSpace(tc.Output) == "" {
-			return fmt.Errorf("problem %q test case %d output is required", problem.Title, index+1)
+	for _, problem := range problems {
+		slug := strings.TrimSpace(problem.Slug)
+		if slug == "" {
+			return fmt.Errorf("problem %q has empty slug", problem.Title)
+		}
+		if seen[slug] {
+			return fmt.Errorf("duplicate slug %q", slug)
+		}
+		seen[slug] = true
+
+		if strings.TrimSpace(problem.Title) == "" {
+			return fmt.Errorf("%s has empty title", slug)
+		}
+		if strings.TrimSpace(problem.Description) == "" {
+			return fmt.Errorf("%s has empty description", slug)
+		}
+		if problem.Difficulty != "Easy" && problem.Difficulty != "Medium" && problem.Difficulty != "Hard" {
+			return fmt.Errorf("%s has invalid difficulty %q", slug, problem.Difficulty)
+		}
+		if len(problem.TestCases) == 0 {
+			return fmt.Errorf("%s has no test cases", slug)
+		}
+		for i, tc := range problem.TestCases {
+			if strings.TrimRight(tc.ExpectedOutput, "\r\n") == "" {
+				return fmt.Errorf("%s test case %d has empty expected_output", slug, i+1)
+			}
 		}
 	}
+
 	return nil
 }
 
-func importProblems(db *gorm.DB, sources []sourceProblem) (importStats, error) {
-	stats := importStats{Problems: len(sources)}
+func importProblem(db *gorm.DB, input sourceProblem) (bool, error) {
+	created := false
 
 	err := db.Transaction(func(tx *gorm.DB) error {
-		for _, source := range sources {
-			testCases := buildTestCases(source.TestCases)
-			stats.TestCases += len(testCases)
+		var problem model.Problem
+		err := tx.Unscoped().Where("slug = ?", input.Slug).First(&problem).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			created = true
+			problem = model.Problem{Slug: input.Slug}
+		} else if err != nil {
+			return err
+		}
 
-			tags, err := ensureTags(tx, source.Tags)
-			if err != nil {
+		timeLimit := input.TimeLimitMS
+		if timeLimit <= 0 {
+			timeLimit = 1000
+		}
+		memoryLimit := input.MemoryLimitMB
+		if memoryLimit <= 0 {
+			memoryLimit = 128
+		}
+
+		problem.Title = strings.TrimSpace(input.Title)
+		problem.Slug = strings.TrimSpace(input.Slug)
+		problem.Description = strings.TrimSpace(input.Description)
+		problem.InputDescription = strings.TrimSpace(input.InputDescription)
+		problem.OutputDescription = strings.TrimSpace(input.OutputDescription)
+		problem.Difficulty = strings.TrimSpace(input.Difficulty)
+		problem.TimeLimitMS = timeLimit
+		problem.MemoryLimitMB = memoryLimit
+		problem.Hint = strings.TrimSpace(input.Hint)
+		problem.IsPublished = input.IsPublished
+
+		if created {
+			if err := tx.Create(&problem).Error; err != nil {
 				return err
 			}
-
-			var problem model.Problem
-			result := tx.Where("slug = ?", source.Slug).Find(&problem)
-			if result.Error != nil {
-				return result.Error
+		} else {
+			// Restore a soft-deleted problem if the slug already exists in deleted rows.
+			if err := tx.Unscoped().Model(&problem).Update("deleted_at", nil).Error; err != nil {
+				return err
 			}
-			if result.RowsAffected == 0 {
-				problem = model.Problem{
-					Title:             source.Title,
-					Slug:              source.Slug,
-					Description:       source.Description,
-					InputDescription:  source.InputDescription,
-					OutputDescription: source.OutputDescription,
-					Difficulty:        normalizedDifficulty(source.Difficulty),
-					TimeLimitMS:       1000,
-					MemoryLimitMB:     128,
-					Hint:              source.Hint,
-					IsPublished:       true,
-					Tags:              tags,
-					TestCases:         testCases,
-				}
-				if err := tx.Create(&problem).Error; err != nil {
-					return fmt.Errorf("create problem %q: %w", source.Slug, err)
-				}
-				stats.Created++
+			if err := tx.Save(&problem).Error; err != nil {
+				return err
+			}
+		}
+
+		tags := make([]model.Tag, 0, len(input.Tags))
+		for _, name := range input.Tags {
+			name = strings.TrimSpace(name)
+			if name == "" {
 				continue
 			}
 
-			updates := map[string]any{
-				"title":              source.Title,
-				"description":        source.Description,
-				"input_description":  source.InputDescription,
-				"output_description": source.OutputDescription,
-				"difficulty":         normalizedDifficulty(source.Difficulty),
-				"time_limit_ms":      1000,
-				"memory_limit_mb":    128,
-				"hint":               source.Hint,
-				"is_published":       true,
+			tag, err := ensureTag(tx, name)
+			if err != nil {
+				return err
 			}
-			if err := tx.Model(&problem).Updates(updates).Error; err != nil {
-				return fmt.Errorf("update problem %q: %w", source.Slug, err)
-			}
-			if err := tx.Model(&problem).Association("Tags").Replace(tags); err != nil {
-				return fmt.Errorf("replace tags for %q: %w", source.Slug, err)
-			}
-			if err := tx.Where("problem_id = ?", problem.ID).Delete(&model.TestCase{}).Error; err != nil {
-				return fmt.Errorf("delete old test cases for %q: %w", source.Slug, err)
-			}
-			for index := range testCases {
-				testCases[index].ProblemID = problem.ID
-			}
-			if err := tx.Create(&testCases).Error; err != nil {
-				return fmt.Errorf("replace test cases for %q: %w", source.Slug, err)
-			}
-			stats.Updated++
+			tags = append(tags, tag)
 		}
+
+		if err := tx.Model(&problem).Association("Tags").Replace(tags); err != nil {
+			return err
+		}
+
+		// These files are the source of truth. Replace old test cases so fixed IO takes effect.
+		if err := tx.Where("problem_id = ?", problem.ID).Delete(&model.TestCase{}).Error; err != nil {
+			return err
+		}
+
+		cases := make([]model.TestCase, 0, len(input.TestCases))
+		for i, tc := range input.TestCases {
+			sortOrder := tc.SortOrder
+			if sortOrder <= 0 {
+				sortOrder = i + 1
+			}
+			cases = append(cases, model.TestCase{
+				ProblemID:      problem.ID,
+				Input:          strings.TrimRight(tc.Input, "\r\n"),
+				ExpectedOutput: strings.TrimRight(tc.ExpectedOutput, "\r\n"),
+				IsSample:       tc.IsSample,
+				SortOrder:      sortOrder,
+			})
+		}
+
+		if err := tx.Create(&cases).Error; err != nil {
+			return err
+		}
+
 		return nil
 	})
 
-	return stats, err
+	return created, err
 }
 
-func buildTestCases(sources []sourceTestCase) []model.TestCase {
-	testCases := make([]model.TestCase, 0, len(sources))
-	for index, source := range sources {
-		testCases = append(testCases, model.TestCase{
-			Input:          source.Input,
-			ExpectedOutput: source.Output,
-			IsSample:       index == 0,
-			SortOrder:      index + 1,
-		})
+func ensureTag(tx *gorm.DB, name string) (model.Tag, error) {
+	var tag model.Tag
+	err := tx.Unscoped().Where("name = ?", name).First(&tag).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		tag = model.Tag{Name: name}
+		return tag, tx.Create(&tag).Error
 	}
-	return testCases
-}
+	if err != nil {
+		return tag, err
+	}
 
-func ensureTags(db *gorm.DB, names []string) ([]model.Tag, error) {
-	tags := make([]model.Tag, 0, len(names))
-	for _, name := range names {
-		name = strings.TrimSpace(name)
-		if name == "" {
-			continue
-		}
-		var tag model.Tag
-		if err := db.Where("name = ?", name).FirstOrCreate(&tag, model.Tag{Name: name}).Error; err != nil {
-			return nil, err
-		}
-		tags = append(tags, tag)
+	if err := tx.Unscoped().Model(&tag).Update("deleted_at", nil).Error; err != nil {
+		return tag, err
 	}
-	return tags, nil
-}
 
-func normalizedDifficulty(value string) string {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "medium":
-		return "Medium"
-	case "hard":
-		return "Hard"
-	default:
-		return "Easy"
-	}
+	return tag, nil
 }

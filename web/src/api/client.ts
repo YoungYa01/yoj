@@ -68,6 +68,7 @@ export interface Problem {
   samples?: TestCase[];
   attempted: boolean;
   accepted: boolean;
+  status_stats?: ProblemStatusStat[];
 }
 
 export interface ContestProblem {
@@ -157,6 +158,12 @@ export interface ListResponse<T> {
   total: number;
   page: number;
   page_size: number;
+}
+
+export interface ProblemStatusStat {
+    status: string;
+    count: number;
+    rate: number;
 }
 
 export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {

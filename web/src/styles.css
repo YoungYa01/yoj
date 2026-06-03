@@ -754,3 +754,333 @@ pre {
     flex-direction: column;
   }
 }
+
+.problem-workbench {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.problem-filter-panel,
+.problem-table-panel {
+    background: #ffffff;
+    border: 1px solid #e3e8f2;
+    border-radius: 10px;
+    box-shadow: 0 10px 24px rgba(16, 24, 40, 0.04);
+}
+
+.problem-filter-panel {
+    position: sticky;
+    top: 86px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px;
+}
+
+.problem-filter-panel .ant-input-affix-wrapper,
+.problem-filter-panel .ant-select {
+    width: 100%;
+}
+
+.filter-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #172033;
+    font-weight: 700;
+}
+
+.filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.filter-label {
+    font-size: 12px;
+    line-height: 1;
+}
+
+.filter-tag-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 2px;
+}
+
+.filter-tag-cloud button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 26px;
+    padding: 0 9px;
+    color: #475467;
+    background: #f8fafc;
+    border: 1px solid #e4e7ec;
+    border-radius: 999px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+}
+
+.filter-tag-cloud button:hover,
+.filter-tag-cloud button.is-active {
+    color: #1d4ed8;
+    background: #eef4ff;
+    border-color: #bfd4ff;
+}
+
+.filter-tag-cloud button span {
+    color: #98a2b3;
+    font-size: 11px;
+}
+
+.filter-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+}
+
+.filter-actions .ant-btn {
+    width: 100%;
+}
+
+.problem-table-panel {
+    overflow: hidden;
+}
+
+.problem-table-panel .ant-table {
+    background: transparent;
+}
+
+.problem-title-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.problem-title-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    color: #172033;
+    font-weight: 650;
+}
+
+.problem-title-link:hover {
+    color: #1d4ed8;
+}
+
+.problem-id {
+    color: #667085;
+    font-weight: 600;
+}
+
+.problem-slug {
+    max-width: 460px;
+    overflow: hidden;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.problem-status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    width: 56px;
+    height: 26px;
+    color: #98a2b3;
+    background: #f8fafc;
+    border: 1px solid #edf1f7;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.problem-status-badge.is-accepted {
+    color: #047857;
+    background: #ecfdf3;
+    border-color: #bbf7d0;
+}
+
+.problem-status-badge.is-attempted {
+    color: #b45309;
+    background: #fffbeb;
+    border-color: #fde68a;
+}
+
+.difficulty-badge {
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 10px;
+    color: #475467;
+    background: #f8fafc;
+    border: 1px solid #edf1f7;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.difficulty-easy {
+    color: #047857;
+    background: #ecfdf3;
+    border-color: #bbf7d0;
+}
+
+.difficulty-medium {
+    color: #b45309;
+    background: #fffbeb;
+    border-color: #fde68a;
+}
+
+.difficulty-hard {
+    color: #b42318;
+    background: #fff1f3;
+    border-color: #fecdd3;
+}
+
+.tag-chip {
+    margin-inline-end: 0;
+    color: #475467;
+    background: #f8fafc;
+    border-color: #e4e7ec;
+}
+
+.clickable-tag {
+    cursor: pointer;
+}
+
+.clickable-tag:hover {
+    color: #1d4ed8;
+    background: #eef4ff;
+    border-color: #bfd4ff;
+}
+
+.problem-result-cell {
+    cursor: pointer;
+}
+
+.result-strip {
+    display: flex;
+    width: 100%;
+    height: 8px;
+    overflow: hidden;
+    background: #edf1f7;
+    border-radius: 999px;
+}
+
+.result-strip-piece {
+    display: block;
+    height: 100%;
+}
+
+.result-strip-empty {
+    width: 100%;
+    background: #edf1f7;
+}
+
+.result-summary {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 6px;
+    font-size: 12px;
+}
+
+.problem-stat-popover {
+    width: 310px;
+}
+
+.problem-stat-popover-title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.problem-stat-row {
+    display: grid;
+    grid-template-columns: 10px 42px minmax(90px, 1fr) 36px 58px;
+    gap: 8px;
+    align-items: center;
+    font-size: 12px;
+}
+
+.stat-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+}
+
+.problem-stat-name {
+    font-weight: 700;
+}
+
+.problem-stat-count,
+.problem-stat-rate {
+    color: #667085;
+    text-align: right;
+}
+
+.stat-accepted {
+    background: #22c55e;
+}
+
+.stat-wrong-answer {
+    background: #ef4444;
+}
+
+.stat-time-limit-exceeded {
+    background: #f97316;
+}
+
+.stat-memory-limit-exceeded {
+    background: #a855f7;
+}
+
+.stat-runtime-error {
+    background: #eab308;
+}
+
+.stat-compile-error {
+    background: #06b6d4;
+}
+
+.stat-system-error {
+    background: #64748b;
+}
+
+.stat-pending {
+    background: #94a3b8;
+}
+
+.stat-judging {
+    background: #3b82f6;
+}
+
+.problem-row-accepted > td:first-child {
+    box-shadow: inset 3px 0 0 #10b981;
+}
+
+.problem-row-attempted > td:first-child {
+    box-shadow: inset 3px 0 0 #f59e0b;
+}
+
+@media (max-width: 1080px) {
+    .problem-workbench {
+        grid-template-columns: 1fr;
+    }
+
+    .problem-filter-panel {
+        position: static;
+    }
+}

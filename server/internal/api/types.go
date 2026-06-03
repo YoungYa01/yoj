@@ -36,25 +36,32 @@ type adminTagResponse struct {
 	CreatedAt    string `json:"created_at"`
 }
 
+type problemStatusStatResponse struct {
+	Status string  `json:"status"`
+	Count  int64   `json:"count"`
+	Rate   float64 `json:"rate"`
+}
+
 type problemResponse struct {
-	ID                uint               `json:"id"`
-	Title             string             `json:"title"`
-	Slug              string             `json:"slug"`
-	Description       string             `json:"description,omitempty"`
-	InputDescription  string             `json:"input_description,omitempty"`
-	OutputDescription string             `json:"output_description,omitempty"`
-	Difficulty        string             `json:"difficulty"`
-	TimeLimitMS       int                `json:"time_limit_ms"`
-	MemoryLimitMB     int                `json:"memory_limit_mb"`
-	Hint              string             `json:"hint,omitempty"`
-	IsPublished       bool               `json:"is_published"`
-	SubmitCount       int64              `json:"submit_count"`
-	AcceptCount       int64              `json:"accept_count"`
-	PassRate          float64            `json:"pass_rate"`
-	Tags              []tagResponse      `json:"tags"`
-	Samples           []testCaseResponse `json:"samples,omitempty"`
-	Attempted         bool               `json:"attempted"`
-	Accepted          bool               `json:"accepted"`
+	ID                uint                        `json:"id"`
+	Title             string                      `json:"title"`
+	Slug              string                      `json:"slug"`
+	Description       string                      `json:"description,omitempty"`
+	InputDescription  string                      `json:"input_description,omitempty"`
+	OutputDescription string                      `json:"output_description,omitempty"`
+	Difficulty        string                      `json:"difficulty"`
+	TimeLimitMS       int                         `json:"time_limit_ms"`
+	MemoryLimitMB     int                         `json:"memory_limit_mb"`
+	Hint              string                      `json:"hint,omitempty"`
+	IsPublished       bool                        `json:"is_published"`
+	SubmitCount       int64                       `json:"submit_count"`
+	AcceptCount       int64                       `json:"accept_count"`
+	PassRate          float64                     `json:"pass_rate"`
+	StatusStats       []problemStatusStatResponse `json:"status_stats"`
+	Tags              []tagResponse               `json:"tags"`
+	Samples           []testCaseResponse          `json:"samples,omitempty"`
+	Attempted         bool                        `json:"attempted"`
+	Accepted          bool                        `json:"accepted"`
 }
 
 type testCaseResponse struct {
