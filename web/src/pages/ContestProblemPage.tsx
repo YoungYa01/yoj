@@ -4,6 +4,7 @@ import { Alert, Button, Divider, message, Select, Space, Tag, Typography } from 
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Contest, Problem, request, Submission } from "../api/client";
+import {useThemeSettings} from "../state/ThemeContext";
 
 const monacoLanguage: Record<string, string> = {
     go: "go",
@@ -21,6 +22,8 @@ const difficultyColor: Record<string, string> = {
 export default function ContestProblemPage() {
     const { id, problemId } = useParams();
     const navigate = useNavigate();
+
+    const { monacoTheme } = useThemeSettings();
 
     const [contest, setContest] = useState<Contest>();
     const [problem, setProblem] = useState<Problem>();
@@ -196,6 +199,7 @@ export default function ContestProblemPage() {
 
                     <Editor
                         height="70vh"
+                        theme={monacoTheme}
                         language={monacoLanguage[language]}
                         value={code}
                         onChange={(value) => setCode(value ?? "")}

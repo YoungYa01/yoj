@@ -1,8 +1,12 @@
-import {ArrowLeftOutlined, DeleteOutlined, EditOutlined, PlusOutlined} from "@ant-design/icons";
+import {
+    ArrowLeftOutlined,
+    DeleteOutlined,
+    EditOutlined,
+    PlusOutlined
+} from "@ant-design/icons";
 import {
     Button,
     Checkbox,
-    Flex,
     Form,
     Input,
     InputNumber,
@@ -13,10 +17,10 @@ import {
     Table,
     Typography
 } from "antd";
-import type {ColumnsType} from "antd/es/table";
-import {useEffect, useState} from "react";
-import {useNavigate, useParams} from "react-router-dom";
-import {Problem, request, TestCase} from "../../api/client";
+import type { ColumnsType } from "antd/es/table";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Problem, request, TestCase } from "../../api/client";
 import AdminNav from "../../components/AdminNav";
 
 interface TestCaseFormValues {
@@ -27,8 +31,14 @@ interface TestCaseFormValues {
 }
 
 export default function AdminTestCasesPage() {
-    const {id} = useParams();
+    const { id } = useParams();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+
+    const returnTo = useMemo(
+        () => searchParams.get("returnTo") || "/admin/problems",
+        [searchParams]
+    );
 
     const [problem, setProblem] = useState<Problem>();
     const [cases, setCases] = useState<TestCase[]>([]);
@@ -95,12 +105,14 @@ export default function AdminTestCasesPage() {
                     method: "PUT",
                     body: JSON.stringify(payload)
                 });
+
                 message.success("测试点已更新");
             } else {
                 await request(`/admin/problems/${id}/test-cases`, {
                     method: "POST",
                     body: JSON.stringify(payload)
                 });
+
                 message.success("测试点已创建");
             }
 
@@ -113,11 +125,9 @@ export default function AdminTestCasesPage() {
 
     async function remove(row: TestCase) {
         try {
-            await request(`/admin/problems/${id}/test-cases/${row.id}`, {
-                method: "DELETE"
-            });
+            await request(`/admin/test-cases/${row.id}`, { method: "DELETE" });
 
-            message.success("测试点已删除");
+            message.success("已删除");
             await load();
         } catch (error) {
             message.error((error as Error).message);
@@ -128,17 +138,17 @@ export default function AdminTestCasesPage() {
         {
             title: "顺序",
             dataIndex: "sort_order",
-            width: 90
+            width: 80
         },
         {
             title: "输入",
             dataIndex: "input",
-            ellipsis: true
+            render: (value: string) => <pre className="table-pre">{value}</pre>
         },
         {
-            title: "输出",
+            title: "期望输出",
             dataIndex: "expected_output",
-            ellipsis: true
+            render: (value: string) => <pre className="table-pre">{value}</pre>
         },
         {
             title: "样例",
@@ -148,17 +158,13 @@ export default function AdminTestCasesPage() {
         },
         {
             title: "操作",
-            width: 200,
+            width: 140,
             render: (_, row) => (
                 <Space>
-                    <Button icon={<EditOutlined/>} onClick={() => openEdit(row)}>
-                        编辑
-                    </Button>
+                    <Button icon={<EditOutlined />} onClick={() => openEdit(row)} />
 
                     <Popconfirm title="确认删除该测试点？" onConfirm={() => remove(row)}>
-                        <Button danger icon={<DeleteOutlined/>}>
-                            删除
-                        </Button>
+                        <Button danger icon={<DeleteOutlined />} />
                     </Popconfirm>
                 </Space>
             )
@@ -167,65 +173,62 @@ export default function AdminTestCasesPage() {
 
     return (
         <main className="page-stack">
-            <AdminNav/>
+            <AdminNav />
 
-            <section className="surface">
-                <Space direction="vertical" size={16} className="full-width">
-                    <Space className="list-toolbar" wrap>
-                        <Flex>
-                            <Button icon={<ArrowLeftOutlined/>} variant={"link"} color={"default"}
-                                    onClick={() => navigate("/admin/problems")}></Button>
+            <div className="page-title-row">
+                <div>
+                    <Space align="center">
+                        <Button icon={<ArrowLeftOutlined />} variant={"text"} color={"default"} onClick={() => navigate(returnTo)}></Button>
 
-                            <Typography.Title level={3} style={{margin: 0}}>
-                                测试点管理：{problem?.title ?? ""}
-                            </Typography.Title>
-                        </Flex>
-
-                        <Button type="primary" icon={<PlusOutlined/>} onClick={openCreate} style={{marginLeft: "auto"}}>
-                            新建测试点
-                        </Button>
+                        <Typography.Title level={2} style={{ margin: 0 }}>
+                            测试点管理: {problem?.id} - {problem?.title}
+                        </Typography.Title>
                     </Space>
+                </div>
 
-                    <Table
-                        rowKey="id"
-                        loading={loading}
-                        dataSource={cases}
-                        columns={columns}
-                        pagination={false}
-                    />
-                </Space>
-            </section>
+                <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+                    新建测试点
+                </Button>
+            </div>
+
+            <Table
+                rowKey="id"
+                loading={loading}
+                columns={columns}
+                dataSource={cases}
+                pagination={false}
+            />
 
             <Modal
                 title={editing ? "编辑测试点" : "新建测试点"}
                 open={open}
-                onCancel={() => setOpen(false)}
                 onOk={save}
+                onCancel={() => setOpen(false)}
                 destroyOnClose
             >
-                <Form form={form} layout="vertical" initialValues={{is_sample: false, sort_order: 1}}>
+                <Form form={form} layout="vertical">
                     <Form.Item
                         name="input"
                         label="输入"
-                        rules={[{required: true, message: "请输入测试输入"}]}
+                        rules={[{ required: true, message: "请输入输入数据" }]}
                     >
-                        <Input.TextArea rows={5}/>
+                        <Input.TextArea rows={6} />
                     </Form.Item>
 
                     <Form.Item
                         name="expected_output"
                         label="期望输出"
-                        rules={[{required: true, message: "请输入期望输出"}]}
+                        rules={[{ required: true, message: "请输入期望输出" }]}
                     >
-                        <Input.TextArea rows={5}/>
+                        <Input.TextArea rows={6} />
                     </Form.Item>
 
                     <Form.Item
                         name="sort_order"
                         label="排序"
-                        rules={[{required: true, message: "请输入排序值"}]}
+                        rules={[{ required: true, message: "请输入排序值" }]}
                     >
-                        <InputNumber min={1} style={{width: "100%"}}/>
+                        <InputNumber min={1} style={{ width: "100%" }} />
                     </Form.Item>
 
                     <Form.Item name="is_sample" valuePropName="checked">

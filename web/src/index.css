@@ -1,0 +1,501 @@
+:root {
+    --yoj-primary: #1d4ed8;
+    --yoj-primary-hover: color-mix(in srgb, var(--yoj-primary) 86%, #000000);
+    --yoj-primary-soft: color-mix(in srgb, var(--yoj-primary) 10%, #ffffff);
+    --yoj-primary-border: color-mix(in srgb, var(--yoj-primary) 26%, #ffffff);
+
+    --yoj-bg: #f5f7fb;
+    --yoj-bg-elevated: #ffffff;
+    --yoj-surface: #ffffff;
+    --yoj-surface-soft: #f8fafc;
+    --yoj-text: #172033;
+    --yoj-heading: #111827;
+    --yoj-muted: #667085;
+    --yoj-border: #e3e8f2;
+    --yoj-border-soft: #edf1f7;
+    --yoj-shadow: 0 10px 24px rgba(16, 24, 40, 0.04);
+    --yoj-header-bg: rgba(255, 255, 255, 0.96);
+    --yoj-code-bg: #101828;
+    --yoj-code-border: #263244;
+    --yoj-code-text: #e5e7eb;
+    --yoj-radius: 8px;
+    --yoj-control-height: 38px;
+}
+
+html[data-theme="dark"] {
+    color-scheme: dark;
+
+    --yoj-primary-soft: color-mix(in srgb, var(--yoj-primary) 22%, #111827);
+    --yoj-primary-border: color-mix(in srgb, var(--yoj-primary) 46%, #111827);
+
+    --yoj-bg: #0f172a;
+    --yoj-bg-elevated: #111827;
+    --yoj-surface: #111827;
+    --yoj-surface-soft: #172033;
+    --yoj-text: #e5e7eb;
+    --yoj-heading: #f8fafc;
+    --yoj-muted: #94a3b8;
+    --yoj-border: #263244;
+    --yoj-border-soft: #1f2937;
+    --yoj-shadow: 0 14px 28px rgba(0, 0, 0, 0.22);
+    --yoj-header-bg: rgba(17, 24, 39, 0.94);
+    --yoj-code-bg: #020617;
+    --yoj-code-border: #1e293b;
+    --yoj-code-text: #e5e7eb;
+}
+
+html[data-density="compact"] {
+    --yoj-control-height: 34px;
+}
+
+html[data-radius="rounded"] {
+    --yoj-radius: 12px;
+}
+
+/* 基础布局 */
+body,
+.app-layout {
+    background: var(--yoj-bg);
+    color: var(--yoj-text);
+}
+
+a,
+.eyebrow,
+.problem-title-link:hover,
+.table-action-link,
+.main-nav-item:hover,
+.main-nav-item.is-active {
+    color: var(--yoj-primary);
+}
+
+.app-header {
+    background: var(--yoj-header-bg);
+    border-bottom-color: var(--yoj-border);
+}
+
+.brand {
+    color: var(--yoj-text);
+}
+
+.brand-mark {
+    background: var(--yoj-primary);
+    box-shadow: 0 8px 16px color-mix(in srgb, var(--yoj-primary) 24%, transparent);
+}
+
+.brand-name,
+.page-hero.compact h1,
+.page-hero.compact h2,
+.page-title-row h1,
+.page-title-row h2,
+.statement-title-block h1,
+.problem-title-link,
+.filter-panel-title,
+.section-title-row h4 {
+    color: var(--yoj-heading);
+}
+
+.brand-subtitle,
+.hero-metrics label,
+.problem-slug,
+.problem-id,
+.filter-label,
+.sample-label,
+.submit-subtitle,
+.problem-stat-count,
+.problem-stat-rate {
+    color: var(--yoj-muted);
+}
+
+.main-nav-item {
+    color: var(--yoj-muted);
+}
+
+.main-nav-item:hover {
+    background: var(--yoj-primary-soft);
+}
+
+.main-nav-item.is-active {
+    background: var(--yoj-primary-soft);
+    border-color: var(--yoj-primary-border);
+}
+
+/* 卡片、面板、工具栏 */
+.surface,
+.auth-panel,
+.surface-toolbar,
+.submission-filter-panel,
+.problem-filter-panel,
+.problem-table-panel,
+.hero-metrics > div,
+.stat-surface,
+.problem-detail-metrics > div,
+.problem-switch-item,
+.solve-left-panel,
+.solve-right-panel {
+    background: var(--yoj-surface);
+    border-color: var(--yoj-border);
+    border-radius: var(--yoj-radius);
+    box-shadow: var(--yoj-shadow);
+}
+
+.surface-toolbar,
+.problem-detail-metrics > div,
+.filter-tag-cloud button,
+.difficulty-badge,
+.problem-status-badge,
+.tag-chip,
+.solve-meta-box > div,
+.solve-footer-tip {
+    background: var(--yoj-surface-soft);
+    border-color: var(--yoj-border-soft);
+    color: var(--yoj-text);
+}
+
+.page-hero {
+    border-bottom-color: var(--yoj-border);
+}
+
+.hero-metrics span,
+.problem-detail-metrics span,
+.solve-meta-box strong,
+.problem-stat-popover-title strong {
+    color: var(--yoj-heading);
+}
+
+/* AntD 常用组件补充覆盖 */
+.ant-table-wrapper .ant-table,
+.ant-table-wrapper .ant-table-container,
+.ant-table-wrapper .ant-table-tbody > tr > td {
+    background: var(--yoj-surface);
+    color: var(--yoj-text);
+    border-color: var(--yoj-border-soft);
+}
+
+.ant-table-wrapper .ant-table-thead > tr > th {
+    background: var(--yoj-surface-soft);
+    color: var(--yoj-muted);
+    border-color: var(--yoj-border-soft);
+}
+
+.ant-table-wrapper .ant-table-tbody > tr:hover > td {
+    background: var(--yoj-primary-soft) !important;
+}
+
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-input-number,
+.ant-picker,
+.ant-mentions,
+.ant-input-number-input {
+    background: var(--yoj-surface) !important;
+    color: var(--yoj-text) !important;
+    border-color: var(--yoj-border) !important;
+    border-radius: var(--yoj-radius) !important;
+}
+
+/* 只覆盖默认 outlined 的 Select，不要影响 borderless / filled / underlined */
+.ant-select-outlined .ant-select-selector {
+    background: var(--yoj-surface) !important;
+    color: var(--yoj-text) !important;
+    border-color: var(--yoj-border) !important;
+    border-radius: var(--yoj-radius) !important;
+}
+
+.ant-select-borderless .ant-select-selector {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+
+.ant-select-borderless:not(.ant-select-disabled):hover .ant-select-selector {
+    background: var(--yoj-primary-soft) !important;
+    border-color: transparent !important;
+}
+
+.ant-select-borderless.ant-select-focused .ant-select-selector {
+    background: var(--yoj-primary-soft) !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+
+.ant-input::placeholder,
+.ant-select-selection-placeholder,
+.ant-input-affix-wrapper .ant-input::placeholder {
+    color: var(--yoj-muted) !important;
+}
+
+.ant-select-dropdown,
+.ant-dropdown-menu,
+.ant-popover-inner,
+.ant-modal-content,
+.ant-drawer-content {
+    background: var(--yoj-surface) !important;
+    color: var(--yoj-text) !important;
+}
+
+.ant-dropdown-menu-item,
+.ant-select-item,
+.ant-drawer-title,
+.ant-modal-title {
+    color: var(--yoj-text) !important;
+}
+
+.ant-select-item-option-active,
+.ant-dropdown-menu-item:hover {
+    background: var(--yoj-primary-soft) !important;
+}
+
+.ant-btn-primary {
+    background: var(--yoj-primary);
+    border-color: var(--yoj-primary);
+}
+
+.ant-btn-primary:hover {
+    background: var(--yoj-primary-hover) !important;
+    border-color: var(--yoj-primary-hover) !important;
+}
+
+/* 标签与状态 */
+.tag-chip {
+    color: var(--yoj-muted);
+}
+
+.clickable-tag:hover,
+.filter-tag-cloud button:hover,
+.filter-tag-cloud button.is-active {
+    color: var(--yoj-primary);
+    background: var(--yoj-primary-soft);
+    border-color: var(--yoj-primary-border);
+}
+
+.result-strip {
+    background: var(--yoj-border-soft);
+}
+
+.problem-stat-popover {
+    color: var(--yoj-text);
+}
+
+/* 代码块 */
+pre,
+.solve-sample-card pre {
+    color: var(--yoj-code-text);
+    background: var(--yoj-code-bg);
+    border-color: var(--yoj-code-border);
+}
+
+/* 题目详情沉浸式页面 */
+body.problem-solve-mode {
+    background: var(--yoj-bg);
+}
+
+body.problem-solve-mode .app-layout {
+    background: var(--yoj-bg);
+}
+
+.problem-solve-page {
+    background:
+            radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--yoj-primary) 8%, transparent), transparent 26%),
+            var(--yoj-bg);
+    color: var(--yoj-text);
+}
+
+.solve-problem-tabs,
+.solve-editor-header,
+.solve-editor-footer {
+    background: var(--yoj-surface);
+    border-color: var(--yoj-border);
+}
+
+.solve-problem-tabs .ant-tabs-tab {
+    color: var(--yoj-muted);
+}
+
+.solve-problem-tabs .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+    color: var(--yoj-primary);
+}
+
+.solve-problem-tabs .ant-tabs-ink-bar {
+    background: var(--yoj-primary);
+}
+
+.solve-statement-scroll {
+    background: var(--yoj-surface);
+}
+
+.solve-title-block,
+.solve-editor-header,
+.solve-editor-footer {
+    border-color: var(--yoj-border);
+}
+
+.solve-problem-id,
+.solve-section h4,
+.solve-sample-title,
+.solve-sample-label {
+    color: var(--yoj-primary);
+}
+
+.solve-section h4::before {
+    background: var(--yoj-primary);
+}
+
+.solve-pre-line {
+    color: var(--yoj-text);
+}
+
+.solve-resizer {
+    background: var(--yoj-surface-soft);
+    border-color: var(--yoj-border);
+}
+
+.solve-resizer:hover {
+    background: var(--yoj-primary-soft);
+}
+
+.solve-resizer span {
+    background: repeating-linear-gradient(
+            to bottom,
+            var(--yoj-muted) 0,
+            var(--yoj-muted) 4px,
+            transparent 4px,
+            transparent 8px
+    );
+}
+
+.solve-editor-area {
+    background: var(--yoj-code-bg);
+}
+
+/* Drawer 题目列表 */
+.solve-problem-drawer .ant-drawer-content {
+    background: var(--yoj-bg) !important;
+}
+
+.solve-problem-drawer .ant-drawer-header {
+    background: var(--yoj-surface) !important;
+    border-bottom-color: var(--yoj-border) !important;
+}
+
+.solve-problem-switch-item {
+    background: var(--yoj-surface);
+    border-color: var(--yoj-border) !important;
+}
+
+.solve-problem-switch-item:hover {
+    border-color: var(--yoj-primary-border) !important;
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--yoj-primary) 10%, transparent);
+}
+
+.solve-problem-switch-item.is-current {
+    background: var(--yoj-primary-soft);
+    border-color: var(--yoj-primary-border) !important;
+}
+
+.solve-switch-title-row .ant-typography {
+    color: var(--yoj-heading);
+}
+
+.solve-switch-slug,
+.solve-switch-rate {
+    color: var(--yoj-muted) !important;
+}
+
+/* 主题设置面板 */
+.theme-settings-trigger {
+    color: var(--yoj-muted);
+    background: var(--yoj-surface);
+    border-color: var(--yoj-border);
+}
+
+.theme-settings-trigger:hover {
+    color: var(--yoj-primary);
+    background: var(--yoj-primary-soft);
+    border-color: var(--yoj-primary-border);
+}
+
+.theme-setting-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.theme-setting-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--yoj-heading);
+    font-weight: 700;
+}
+
+.theme-setting-help {
+    font-size: 12px;
+}
+
+.theme-segment-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.theme-color-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.theme-color-card {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) 16px;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 0 10px;
+    color: var(--yoj-text);
+    background: var(--yoj-surface);
+    border: 1px solid var(--yoj-border);
+    border-radius: var(--yoj-radius);
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+}
+
+.theme-color-card:hover,
+.theme-color-card.is-active {
+    color: var(--yoj-primary);
+    background: var(--yoj-primary-soft);
+    border-color: var(--yoj-primary-border);
+}
+
+.theme-color-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.55);
+}
+
+/* 紧凑模式 */
+html[data-density="compact"] .app-content {
+    margin-top: 20px;
+    margin-bottom: 32px;
+}
+
+html[data-density="compact"] .surface,
+html[data-density="compact"] .auth-panel,
+html[data-density="compact"] .problem-filter-panel,
+html[data-density="compact"] .submission-filter-panel {
+    padding: 14px;
+}
+
+html[data-density="compact"] .page-stack {
+    gap: 14px;
+}
+
+html[data-density="compact"] .main-nav-item {
+    height: 34px;
+    padding-inline: 10px;
+}
+
+html[data-density="compact"] .app-header {
+    height: 58px;
+}

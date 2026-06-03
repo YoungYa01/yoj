@@ -85,9 +85,7 @@ export default function AdminContestListPage() {
       width: 160,
       render: (_, row) => (
         <Space>
-          <Button icon={<EditOutlined />} onClick={() => navigate(`/admin/contests/${row.id}/edit`)}>
-            编辑
-          </Button>
+          <Button icon={<EditOutlined />} onClick={() => navigate(`/admin/contests/${row.id}/edit`)}></Button>
           <Popconfirm title="确认删除该比赛？" onConfirm={() => remove(row.id)}>
             <Button danger icon={<DeleteOutlined />} />
           </Popconfirm>

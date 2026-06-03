@@ -1,10 +1,36 @@
 import Editor from "@monaco-editor/react";
-import { ArrowLeftOutlined, PlayCircleOutlined } from "@ant-design/icons";
-import { Alert, Button, Divider, message, Select, Space, Tag, Typography } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import {
+    ArrowLeftOutlined,
+    CheckCircleFilled,
+    ClockCircleOutlined,
+    CodeOutlined,
+    CopyOutlined,
+    MenuOutlined,
+    PlayCircleOutlined,
+    ReloadOutlined,
+    SearchOutlined
+} from "@ant-design/icons";
+import {
+    Button,
+    Drawer,
+    Empty,
+    Input,
+    List,
+    message,
+    Select,
+    Space,
+    Spin,
+    Tag,
+    Tabs,
+    Tooltip,
+    Typography
+} from "antd";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent, UIEvent as ReactUIEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Problem, request, Submission } from "../api/client";
+import { buildQuery, ListResponse, Problem, request, Submission } from "../api/client";
 import { useAuth } from "../state/AuthContext";
+import {useThemeSettings} from "../state/ThemeContext";
 
 const monacoLanguage: Record<string, string> = {
     go: "go",
@@ -19,32 +45,260 @@ const difficultyColor: Record<string, string> = {
     Hard: "red"
 };
 
+const languageOptions = [
+    { label: "C++", value: "cpp" },
+    { label: "C", value: "c" },
+    { label: "Go", value: "go" },
+    { label: "Python", value: "python" }
+];
+
+const difficultyOptions = [
+    { label: "Easy", value: "Easy" },
+    { label: "Medium", value: "Medium" },
+    { label: "Hard", value: "Hard" }
+];
+
+const PROBLEM_SWITCH_PAGE_SIZE = 30;
+
+function formatRate(value?: number) {
+    return `${Number(value ?? 0).toFixed(2)}%`;
+}
+
+function problemStateText(problem: Problem) {
+    if (problem.accepted) {
+        return "已通过";
+    }
+
+    if (problem.attempted) {
+        return "尝试过";
+    }
+
+    return "未开始";
+}
+
+function ProblemMiniStatus({ problem }: { problem: Problem }) {
+    if (problem.accepted) {
+        return (
+            <span className="solve-mini-status is-accepted">
+        <CheckCircleFilled />
+        AC
+      </span>
+        );
+    }
+
+    if (problem.attempted) {
+        return (
+            <span className="solve-mini-status is-attempted">
+        <ClockCircleOutlined />
+        TRY
+      </span>
+        );
+    }
+
+    return <span className="solve-mini-status">TODO</span>;
+}
+
 export default function ProblemDetailPage() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
 
+    const { monacoTheme } = useThemeSettings();
+
+    const splitRef = useRef<HTMLDivElement | null>(null);
+
     const [problem, setProblem] = useState<Problem>();
+    const [problemLoading, setProblemLoading] = useState(false);
     const [language, setLanguage] = useState("cpp");
     const [code, setCode] = useState("");
     const [submitting, setSubmitting] = useState(false);
+    const [activeTab, setActiveTab] = useState("statement");
 
-    useEffect(() => {
-        setCode("");
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [problemListLoading, setProblemListLoading] = useState(false);
+    const [problemListLoadingMore, setProblemListLoadingMore] = useState(false);
+    const [problemList, setProblemList] = useState<Problem[]>([]);
+    const [problemListPage, setProblemListPage] = useState(1);
+    const [problemListTotal, setProblemListTotal] = useState(0);
+    const [problemListHasMore, setProblemListHasMore] = useState(true);
+    const [problemKeyword, setProblemKeyword] = useState("");
+    const [problemDifficulty, setProblemDifficulty] = useState<string | undefined>();
 
-        async function load() {
-            const data = await request<{ problem: Problem }>(`/problems/${id}`);
-            setProblem(data.problem);
-        }
-
-        void load();
-    }, [id]);
+    const [leftWidth, setLeftWidth] = useState(() => {
+        const cached = Number(localStorage.getItem("yoj_problem_split_width"));
+        return Number.isFinite(cached) && cached >= 34 && cached <= 68 ? cached : 50;
+    });
 
     const samples = useMemo(() => problem?.samples ?? [], [problem]);
+
+    const draftKey = useMemo(() => {
+        if (!id) {
+            return "";
+        }
+
+        return `yoj_problem_${id}_${language}_code`;
+    }, [id, language]);
+
+    const pageStyle = {
+        "--solve-left-width": `${leftWidth}%`
+    } as CSSProperties;
+
+    const loadProblem = useCallback(async () => {
+        if (!id) {
+            return;
+        }
+
+        setProblemLoading(true);
+
+        try {
+            const data = await request<{ problem: Problem }>(`/problems/${id}`);
+            setProblem(data.problem);
+        } catch (error) {
+            message.error((error as Error).message);
+        } finally {
+            setProblemLoading(false);
+        }
+    }, [id]);
+
+    async function loadProblemList(reset = true) {
+        if (!drawerOpen) {
+            return;
+        }
+
+        if (!reset && (!problemListHasMore || problemListLoading || problemListLoadingMore)) {
+            return;
+        }
+
+        const nextPage = reset ? 1 : problemListPage + 1;
+
+        if (reset) {
+            setProblemListLoading(true);
+            setProblemListHasMore(true);
+        } else {
+            setProblemListLoadingMore(true);
+        }
+
+        try {
+            const query = buildQuery({
+                page: nextPage,
+                page_size: PROBLEM_SWITCH_PAGE_SIZE,
+                keyword: problemKeyword.trim(),
+                difficulty: problemDifficulty
+            });
+
+            const data = await request<ListResponse<Problem>>(`/problems${query}`);
+
+            setProblemListPage(data.page);
+            setProblemListTotal(data.total);
+            setProblemListHasMore(data.page * data.page_size < data.total);
+
+            if (reset) {
+                setProblemList(data.items);
+            } else {
+                setProblemList((prev) => {
+                    const existing = new Set(prev.map((item) => item.id));
+                    const nextItems = data.items.filter((item) => !existing.has(item.id));
+                    return [...prev, ...nextItems];
+                });
+            }
+        } catch (error) {
+            message.error((error as Error).message);
+        } finally {
+            if (reset) {
+                setProblemListLoading(false);
+            } else {
+                setProblemListLoadingMore(false);
+            }
+        }
+    }
+
+    useEffect(() => {
+        document.body.classList.add("problem-solve-mode");
+
+        return () => {
+            document.body.classList.remove("problem-solve-mode");
+        };
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem("yoj_problem_split_width", String(leftWidth));
+    }, [leftWidth]);
+
+    useEffect(() => {
+        void loadProblem();
+    }, [loadProblem]);
+
+    useEffect(() => {
+        if (!draftKey) {
+            return;
+        }
+
+        setCode(localStorage.getItem(draftKey) ?? "");
+    }, [draftKey]);
+
+    useEffect(() => {
+        if (!draftKey) {
+            return;
+        }
+
+        const timer = window.setTimeout(() => {
+            localStorage.setItem(draftKey, code);
+        }, 250);
+
+        return () => {
+            window.clearTimeout(timer);
+        };
+    }, [draftKey, code]);
+
+    useEffect(() => {
+        if (!drawerOpen) {
+            return;
+        }
+
+        const timer = window.setTimeout(() => {
+            void loadProblemList(true);
+        }, 240);
+
+        return () => {
+            window.clearTimeout(timer);
+        };
+    }, [drawerOpen, problemKeyword, problemDifficulty]);
+
+    function startResize(event: ReactPointerEvent<HTMLDivElement>) {
+        event.preventDefault();
+
+        const container = splitRef.current;
+        if (!container) {
+            return;
+        }
+
+        const rect = container.getBoundingClientRect();
+
+        function handleMove(moveEvent: PointerEvent) {
+            const raw = ((moveEvent.clientX - rect.left) / rect.width) * 100;
+            const next = Math.min(68, Math.max(34, raw));
+            setLeftWidth(next);
+        }
+
+        function handleUp() {
+            window.removeEventListener("pointermove", handleMove);
+            window.removeEventListener("pointerup", handleUp);
+            document.body.classList.remove("problem-resizing");
+        }
+
+        document.body.classList.add("problem-resizing");
+        window.addEventListener("pointermove", handleMove);
+        window.addEventListener("pointerup", handleUp);
+    }
 
     async function submit() {
         if (!user) {
             navigate("/login");
+            return;
+        }
+
+        if (!code.trim()) {
+            message.warning("先写点代码再提交吧");
             return;
         }
 
@@ -65,110 +319,295 @@ export default function ProblemDetailPage() {
         }
     }
 
+    function resetCode() {
+        setCode("");
+        if (draftKey) {
+            localStorage.removeItem(draftKey);
+        }
+        message.success("代码已清空");
+    }
+
+    async function copyText(text: string) {
+        try {
+            await navigator.clipboard.writeText(text);
+            message.success("已复制");
+        } catch {
+            message.warning("复制失败，请手动复制");
+        }
+    }
+
+    function switchProblem(nextProblem: Problem) {
+        if (String(nextProblem.id) === String(id)) {
+            setDrawerOpen(false);
+            return;
+        }
+
+        setDrawerOpen(false);
+        setActiveTab("statement");
+        navigate(`/problems/${nextProblem.id}`);
+    }
+
+    function handleProblemListScroll(event: ReactUIEvent<HTMLDivElement>) {
+        const target = event.currentTarget;
+        const distanceToBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+
+        if (distanceToBottom <= 80) {
+            void loadProblemList(false);
+        }
+    }
+
+    if (problemLoading && !problem) {
+        return (
+            <main className="solve-loading">
+                <Spin />
+                <Typography.Text type="secondary">正在加载题目...</Typography.Text>
+            </main>
+        );
+    }
+
     if (!problem) {
-        return <main className="page-stack">加载中...</main>;
+        return (
+            <main className="solve-loading">
+                <Empty description="题目不存在或暂不可访问" />
+                <Button onClick={() => navigate("/problems")}>返回题库</Button>
+            </main>
+        );
     }
 
     return (
-        <main className="problem-detail-grid">
-            <section className="surface statement-pane">
-                <Space direction="vertical" size={16} className="full-width">
-                    <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
-                        返回
-                    </Button>
+        <main className="problem-solve-page" style={pageStyle}>
+            <div className="solve-split" ref={splitRef}>
+                <section className="solve-left-panel">
+                    <header className="solve-problem-tabs">
+                        <Space size={8}>
+                            <Tooltip title="题目列表">
+                                <Button icon={<MenuOutlined />} onClick={() => setDrawerOpen(true)} />
+                            </Tooltip>
 
-                    <div className="statement-title-block">
-                        <Typography.Text className="eyebrow">Problem #{problem.id}</Typography.Text>
-
-                        <Typography.Title level={1}>{problem.title}</Typography.Title>
-
-                        <Space size={[8, 8]} wrap>
-                            <Tag color={difficultyColor[problem.difficulty] ?? "default"}>
-                                {problem.difficulty}
-                            </Tag>
-
-                            <Tag>{problem.time_limit_ms} ms</Tag>
-                            <Tag>{problem.memory_limit_mb} MB</Tag>
-
-                            {problem.tags.map((tag) => (
-                                <Tag key={tag.id} className="tag-chip">
-                                    {tag.name}
-                                </Tag>
-                            ))}
+                            <Tooltip title="返回题库">
+                                <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/problems")} />
+                            </Tooltip>
                         </Space>
-                    </div>
 
-                    <Typography.Paragraph className="pre-line statement-copy">
-                        {problem.description}
-                    </Typography.Paragraph>
-
-                    <Divider />
-
-                    <section className="statement-section">
-                        <Typography.Title level={4}>输入格式</Typography.Title>
-                        <Typography.Paragraph className="pre-line">
-                            {problem.input_description}
-                        </Typography.Paragraph>
-                    </section>
-
-                    <section className="statement-section">
-                        <Typography.Title level={4}>输出格式</Typography.Title>
-                        <Typography.Paragraph className="pre-line">
-                            {problem.output_description}
-                        </Typography.Paragraph>
-                    </section>
-
-                    {samples.length > 0 && (
-                        <section className="statement-section">
-                            <Typography.Title level={4}>样例</Typography.Title>
-
-                            <Space direction="vertical" size={16} className="full-width">
-                                {samples.map((sample, index) => (
-                                    <div key={sample.id ?? index}>
-                                        <Typography.Text strong>样例 {index + 1}</Typography.Text>
-
-                                        <div className="sample-grid" style={{ marginTop: 8 }}>
-                                            <div>
-                                                <div className="sample-label">输入</div>
-                                                <pre>{sample.input}</pre>
-                                            </div>
-
-                                            <div>
-                                                <div className="sample-label">输出</div>
-                                                <pre>{sample.expected_output}</pre>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </Space>
-                        </section>
-                    )}
-
-                    {problem.hint && <Alert type="info" message={problem.hint} />}
-                </Space>
-            </section>
-
-            <section className="surface submit-pane">
-                <div className="submit-header">
-                    <div>
-                        <Typography.Text strong>提交代码</Typography.Text>
-                        <Typography.Text type="secondary" className="submit-subtitle">
-                            标准输入输出，代码不会预置模板
-                        </Typography.Text>
-                    </div>
-
-                    <Space>
-                        <Select
-                            value={language}
-                            onChange={setLanguage}
-                            style={{ width: 112 }}
-                            options={[
-                                { label: "Go", value: "go" },
-                                { label: "C", value: "c" },
-                                { label: "C++", value: "cpp" },
-                                { label: "Python", value: "python" }
+                        <Tabs
+                            activeKey={activeTab}
+                            onChange={setActiveTab}
+                            items={[
+                                { key: "statement", label: "题目描述" },
+                                { key: "submissions", label: "我的提交" }
                             ]}
                         />
+                    </header>
+
+                    {activeTab === "statement" ? (
+                        <div className="solve-statement-scroll">
+                            <section className="solve-title-block">
+                                <div className="solve-title-row">
+                                    <div>
+                                        <Typography.Text className="solve-problem-id">
+                                            Problem #{problem.id}
+                                        </Typography.Text>
+
+                                        <Typography.Title level={1}>{problem.title}</Typography.Title>
+                                    </div>
+
+                                    <ProblemMiniStatus problem={problem} />
+                                </div>
+
+                                <Space size={[8, 8]} wrap>
+                                    <Tag color={difficultyColor[problem.difficulty] ?? "default"}>
+                                        {problem.difficulty}
+                                    </Tag>
+
+                                    <Tag>{problem.time_limit_ms} ms</Tag>
+                                    <Tag>{problem.memory_limit_mb} MB</Tag>
+
+                                    {problem.tags?.map((tag) => (
+                                        <Tag key={tag.id} className="solve-tag">
+                                            {tag.name}
+                                        </Tag>
+                                    ))}
+                                </Space>
+                            </section>
+
+                            <section className="solve-meta-box">
+                                <div>
+                                    <span>时间限制</span>
+                                    <strong>{problem.time_limit_ms} ms</strong>
+                                </div>
+
+                                <div>
+                                    <span>内存限制</span>
+                                    <strong>{problem.memory_limit_mb} MB</strong>
+                                </div>
+
+                                <div>
+                                    <span>难度</span>
+                                    <strong>{problem.difficulty}</strong>
+                                </div>
+
+                                <div>
+                                    <span>通过率</span>
+                                    <strong>{formatRate(problem.pass_rate)}</strong>
+                                </div>
+                            </section>
+
+                            <section className="solve-section">
+                                <Typography.Title level={4}>描述</Typography.Title>
+                                <Typography.Paragraph className="solve-pre-line">
+                                    {problem.description}
+                                </Typography.Paragraph>
+                            </section>
+
+                            <section className="solve-section">
+                                <Typography.Title level={4}>输入描述</Typography.Title>
+                                <Typography.Paragraph className="solve-pre-line">
+                                    {problem.input_description}
+                                </Typography.Paragraph>
+                            </section>
+
+                            <section className="solve-section">
+                                <Typography.Title level={4}>输出描述</Typography.Title>
+                                <Typography.Paragraph className="solve-pre-line">
+                                    {problem.output_description}
+                                </Typography.Paragraph>
+                            </section>
+
+                            {samples.length > 0 && (
+                                <section className="solve-section">
+                                    <Typography.Title level={4}>样例</Typography.Title>
+
+                                    <Space direction="vertical" size={16} className="full-width">
+                                        {samples.map((sample, index) => (
+                                            <div className="solve-sample-card" key={sample.id ?? index}>
+                                                <div className="solve-sample-title">样例 {index + 1}</div>
+
+                                                <div className="solve-sample-grid">
+                                                    <div>
+                                                        <div className="solve-sample-label">
+                                                            <span>输入</span>
+
+                                                            <Button
+                                                                type="text"
+                                                                size="small"
+                                                                icon={<CopyOutlined />}
+                                                                onClick={() => copyText(sample.input)}
+                                                            />
+                                                        </div>
+
+                                                        <pre>{sample.input || "无输入"}</pre>
+                                                    </div>
+
+                                                    <div>
+                                                        <div className="solve-sample-label">
+                                                            <span>输出</span>
+
+                                                            <Button
+                                                                type="text"
+                                                                size="small"
+                                                                icon={<CopyOutlined />}
+                                                                onClick={() => copyText(sample.expected_output)}
+                                                            />
+                                                        </div>
+
+                                                        <pre>{sample.expected_output}</pre>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </Space>
+                                </section>
+                            )}
+
+                            {problem.hint && (
+                                <section className="solve-section">
+                                    <Typography.Title level={4}>提示</Typography.Title>
+                                    <div className="solve-hint">{problem.hint}</div>
+                                </section>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="solve-statement-scroll">
+                            <section className="solve-empty-tab">
+                                <Empty description="这里先跳转到提交记录页查看" />
+
+                                <Space>
+                                    <Button onClick={() => navigate(`/submissions?problem_id=${problem.id}`)}>
+                                        查看此题提交
+                                    </Button>
+
+                                    <Button onClick={() => setActiveTab("statement")}>返回题面</Button>
+                                </Space>
+                            </section>
+                        </div>
+                    )}
+                </section>
+
+                <div
+                    className="solve-resizer"
+                    onPointerDown={startResize}
+                    role="separator"
+                    aria-label="调整题面和编辑器宽度"
+                >
+                    <span />
+                </div>
+
+                <section className="solve-right-panel">
+                    <header className="solve-editor-header">
+                        <Space size={8}>
+                            <Typography.Text className="solve-editor-label">语言：</Typography.Text>
+
+                            <Select
+                                value={language}
+                                onChange={setLanguage}
+                                style={{ width: 150 }}
+                                options={languageOptions}
+                            />
+
+                            <Tooltip title="清空当前代码">
+                                <Button icon={<ReloadOutlined />} onClick={resetCode} />
+                            </Tooltip>
+                        </Space>
+
+                    </header>
+
+                    <div className="solve-editor-area">
+                        <Editor
+                            height="100%"
+                            language={monacoLanguage[language]}
+                            theme={monacoTheme}
+                            value={code}
+                            onChange={(value) => setCode(value ?? "")}
+                            options={{
+                                minimap: { enabled: false },
+                                fontSize: 14,
+                                tabSize: 4,
+                                wordWrap: "on",
+                                smoothScrolling: true,
+                                scrollBeyondLastLine: false,
+                                automaticLayout: true,
+                                padding: {
+                                    top: 12,
+                                    bottom: 12
+                                }
+                            }}
+                        />
+                    </div>
+
+                    <footer className="solve-editor-footer">
+                        <div className={user ? "solve-footer-tip" : "solve-footer-tip is-warning"}>
+                            {user ? (
+                                <>
+                                    <CodeOutlined />
+                                    代码草稿会自动保存在本地
+                                </>
+                            ) : (
+                                <>
+                                    <ClockCircleOutlined />
+                                    请先登录，登录后才能提交评测
+                                </>
+                            )}
+                        </div>
 
                         <Button
                             type="primary"
@@ -176,25 +615,107 @@ export default function ProblemDetailPage() {
                             loading={submitting}
                             onClick={submit}
                         >
-                            提交
+                            提交评测
                         </Button>
-                    </Space>
-                </div>
+                    </footer>
+                </section>
+            </div>
 
-                <Editor
-                    height="calc(100vh - 232px)"
-                    language={monacoLanguage[language]}
-                    theme="vs-dark"
-                    value={code}
-                    onChange={(value) => setCode(value ?? "")}
-                    options={{
-                        minimap: { enabled: false },
-                        fontSize: 14,
-                        tabSize: 4,
-                        scrollBeyondLastLine: false
-                    }}
-                />
-            </section>
+            <Drawer
+                title="题目列表"
+                placement="left"
+                width={440}
+                open={drawerOpen}
+                onClose={() => setDrawerOpen(false)}
+                className="solve-problem-drawer"
+            >
+                <div className="solve-drawer-content">
+                    <div className="solve-drawer-filters">
+                        <Input
+                            allowClear
+                            prefix={<SearchOutlined />}
+                            placeholder="搜索题目名称 / slug"
+                            value={problemKeyword}
+                            onChange={(event) => setProblemKeyword(event.target.value)}
+                        />
+
+                        <Select
+                            allowClear
+                            placeholder="全部难度"
+                            value={problemDifficulty}
+                            onChange={setProblemDifficulty}
+                            options={difficultyOptions}
+                        />
+
+                        <Typography.Text type="secondary" className="solve-drawer-count">
+                            已加载 {problemList.length} / {problemListTotal} 道题
+                        </Typography.Text>
+                    </div>
+
+                    <div className="solve-problem-list-scroll" onScroll={handleProblemListScroll}>
+                        <List
+                            loading={problemListLoading}
+                            dataSource={problemList}
+                            locale={{ emptyText: <Empty description="没有找到题目" /> }}
+                            renderItem={(item) => {
+                                const isCurrent = String(item.id) === String(id);
+
+                                return (
+                                    <List.Item
+                                        className={`solve-problem-switch-item ${isCurrent ? "is-current" : ""}`}
+                                        onClick={() => switchProblem(item)}
+                                    >
+                                        <div className="solve-switch-main">
+                                            <div className="solve-switch-title-row">
+                                                <Typography.Text strong ellipsis>
+                                                    #{item.id} {item.title}
+                                                </Typography.Text>
+
+                                                <ProblemMiniStatus problem={item} />
+                                            </div>
+
+                                            <Typography.Text type="secondary" className="solve-switch-slug">
+                                                {item.slug}
+                                            </Typography.Text>
+
+                                            <Space size={[6, 6]} wrap className="solve-switch-tags">
+                                                <Tag color={difficultyColor[item.difficulty] ?? "default"}>
+                                                    {item.difficulty}
+                                                </Tag>
+
+                                                {item.tags?.slice(0, 3).map((tag) => (
+                                                    <Tag key={tag.id} className="solve-tag">
+                                                        {tag.name}
+                                                    </Tag>
+                                                ))}
+                                            </Space>
+
+                                            <div className="solve-switch-rate">
+                                                <span>通过率 {formatRate(item.pass_rate)}</span>
+                                                <span>
+                  AC {item.accept_count}/{item.submit_count}
+                </span>
+                                            </div>
+                                        </div>
+                                    </List.Item>
+                                );
+                            }}
+                        />
+
+                        <div className="solve-list-load-state">
+                            {problemListLoadingMore && <Spin size="small" />}
+
+                            {!problemListLoading && !problemListLoadingMore && problemList.length > 0 && (
+                                problemListHasMore ? (
+                                    <Typography.Text type="secondary">继续向下滚动加载更多</Typography.Text>
+                                ) : (
+                                    <Typography.Text type="secondary">已经到底啦</Typography.Text>
+                                )
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </Drawer>
         </main>
     );
 }

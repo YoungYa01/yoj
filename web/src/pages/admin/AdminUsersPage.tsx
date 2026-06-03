@@ -60,7 +60,7 @@ export default function AdminUsersPage() {
                     value={value}
                     onChange={(nextRole) => updateRole(row, nextRole)}
                     style={{width: 150}}
-                    variant="underlined"
+                    variant="borderless"
                     options={[
                         {label: "普通用户", value: "user"},
                         {label: "管理员", value: "admin"}
