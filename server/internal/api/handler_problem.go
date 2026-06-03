@@ -79,10 +79,13 @@ func (s *Server) getProblem(c *gin.Context) {
 	}
 
 	var problem model.Problem
-	err := s.db.Preload("Tags").
-		Preload("TestCases", "is_sample = ?", true).
-		Where("is_published = ?", true).
-		First(&problem, id).Error
+	err := s.db.
+		Preload("Tags").
+		Preload("TestCases", func(db *gorm.DB) *gorm.DB {
+			return db.Where("is_sample = ?", true).Order("sort_order ASC, id ASC")
+		}).
+		Where("id = ? AND is_public = ?", id, true).
+		First(&problem).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "problem not found"})
 		return

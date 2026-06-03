@@ -9,7 +9,7 @@ import {
   UserAddOutlined,
   UserOutlined
 } from "@ant-design/icons";
-import { Avatar, Button, Dropdown, Layout, Space, Typography } from "antd";
+import {Avatar, Button, Dropdown, InputNumber, Layout, Space, Typography} from "antd";
 import type { MenuProps } from "antd";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/AuthContext";
@@ -37,13 +37,12 @@ export default function AppShell() {
         : "/";
 
   const userMenu: MenuProps["items"] = [
-    {
+      user?.role !== "admin" ? null : {
       key: "admin",
       icon: <SettingOutlined />,
       label: "管理后台",
       onClick: () => navigate("/admin/dashboard"),
-      disabled: user?.role !== "admin"
-    },
+    } ,
     {
       type: "divider"
     },

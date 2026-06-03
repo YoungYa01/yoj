@@ -247,6 +247,11 @@ a:hover {
   padding: 20px;
 }
 
+.surface .list-toolbar{
+    display: flex;
+    justify-content: space-between;
+}
+
 .table-surface {
   padding: 0;
   overflow: hidden;

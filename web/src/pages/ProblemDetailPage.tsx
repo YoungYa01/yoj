@@ -1,5 +1,5 @@
 import Editor from "@monaco-editor/react";
-import { PlayCircleOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, PlayCircleOutlined } from "@ant-design/icons";
 import { Alert, Button, Divider, message, Select, Space, Tag, Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -7,147 +7,176 @@ import { Problem, request, Submission } from "../api/client";
 import { useAuth } from "../state/AuthContext";
 
 const monacoLanguage: Record<string, string> = {
-  go: "go",
-  c: "c",
-  cpp: "cpp",
-  python: "python"
+    go: "go",
+    c: "c",
+    cpp: "cpp",
+    python: "python"
 };
 
 const difficultyColor: Record<string, string> = {
-  Easy: "green",
-  Medium: "gold",
-  Hard: "red"
+    Easy: "green",
+    Medium: "gold",
+    Hard: "red"
 };
 
 export default function ProblemDetailPage() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const [problem, setProblem] = useState<Problem>();
-  const [language, setLanguage] = useState("cpp");
-  const [code, setCode] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const { user } = useAuth();
 
-  useEffect(() => {
-    setCode("");
-    async function load() {
-      const data = await request<{ problem: Problem }>(`/problems/${id}`);
-      setProblem(data.problem);
+    const [problem, setProblem] = useState<Problem>();
+    const [language, setLanguage] = useState("cpp");
+    const [code, setCode] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+
+    useEffect(() => {
+        setCode("");
+
+        async function load() {
+            const data = await request<{ problem: Problem }>(`/problems/${id}`);
+            setProblem(data.problem);
+        }
+
+        void load();
+    }, [id]);
+
+    const samples = useMemo(() => problem?.samples ?? [], [problem]);
+
+    async function submit() {
+        if (!user) {
+            navigate("/login");
+            return;
+        }
+
+        setSubmitting(true);
+
+        try {
+            const data = await request<{ submission: Submission }>(`/problems/${id}/submit`, {
+                method: "POST",
+                body: JSON.stringify({ language, code })
+            });
+
+            message.success("提交成功，正在判题");
+            navigate(`/submissions/${data.submission.id}`);
+        } catch (error) {
+            message.error((error as Error).message);
+        } finally {
+            setSubmitting(false);
+        }
     }
-    void load();
-  }, [id]);
 
-  const sample = useMemo(() => problem?.samples?.[0], [problem]);
-
-  async function submit() {
-    if (!user) {
-      navigate("/login");
-      return;
+    if (!problem) {
+        return <main className="page-stack">加载中...</main>;
     }
-    setSubmitting(true);
-    try {
-      const data = await request<{ submission: Submission }>(`/problems/${id}/submit`, {
-        method: "POST",
-        body: JSON.stringify({ language, code })
-      });
-      message.success("提交成功，正在判题");
-      navigate(`/submissions/${data.submission.id}`);
-    } catch (error) {
-      message.error((error as Error).message);
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
-  if (!problem) {
-    return <main className="page-stack">加载中...</main>;
-  }
+    return (
+        <main className="problem-detail-grid">
+            <section className="surface statement-pane">
+                <Space direction="vertical" size={16} className="full-width">
+                    <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
+                        返回
+                    </Button>
 
-  return (
-    <main className="problem-detail-grid">
-      <section className="surface statement-pane">
-        <Space direction="vertical" size={16} className="full-width">
-          <div className="statement-title-block">
-            <Typography.Text className="eyebrow">Problem #{problem.id}</Typography.Text>
-            <Typography.Title level={1}>{problem.title}</Typography.Title>
-            <Space size={[8, 8]} wrap>
-              <Tag color={difficultyColor[problem.difficulty] ?? "default"}>{problem.difficulty}</Tag>
-              <Tag>{problem.time_limit_ms} ms</Tag>
-              <Tag>{problem.memory_limit_mb} MB</Tag>
-              {problem.tags.map((tag) => (
-                <Tag key={tag.id} className="tag-chip">
-                  {tag.name}
-                </Tag>
-              ))}
-            </Space>
-          </div>
+                    <div className="statement-title-block">
+                        <Typography.Title level={2}>{problem.title}</Typography.Title>
 
-          <Typography.Paragraph className="pre-line statement-copy">{problem.description}</Typography.Paragraph>
-          <Divider />
+                        <Space wrap>
+                            <Tag color={difficultyColor[problem.difficulty]}>{problem.difficulty}</Tag>
+                            {problem.tags?.map((tag) => (
+                                <Tag key={tag.id}>{tag.name}</Tag>
+                            ))}
+                        </Space>
+                    </div>
 
-          <section className="statement-section">
-            <Typography.Title level={4}>输入格式</Typography.Title>
-            <Typography.Paragraph className="pre-line">{problem.input_description}</Typography.Paragraph>
-          </section>
+                    <Divider />
 
-          <section className="statement-section">
-            <Typography.Title level={4}>输出格式</Typography.Title>
-            <Typography.Paragraph className="pre-line">{problem.output_description}</Typography.Paragraph>
-          </section>
+                    <Typography.Title level={4}>题目描述</Typography.Title>
+                    <Typography.Paragraph style={{ whiteSpace: "pre-wrap" }}>
+                        {problem.description}
+                    </Typography.Paragraph>
 
-          {sample && (
-            <section className="statement-section">
-              <Typography.Title level={4}>样例</Typography.Title>
-              <div className="sample-grid">
-                <div>
-                  <div className="sample-label">输入</div>
-                  <pre>{sample.input}</pre>
-                </div>
-                <div>
-                  <div className="sample-label">输出</div>
-                  <pre>{sample.expected_output}</pre>
-                </div>
-              </div>
+                    <Typography.Title level={4}>输入说明</Typography.Title>
+                    <Typography.Paragraph style={{ whiteSpace: "pre-wrap" }}>
+                        {problem.input_description}
+                    </Typography.Paragraph>
+
+                    <Typography.Title level={4}>输出说明</Typography.Title>
+                    <Typography.Paragraph style={{ whiteSpace: "pre-wrap" }}>
+                        {problem.output_description}
+                    </Typography.Paragraph>
+
+                    {samples.length > 0 && (
+                        <>
+                            <Typography.Title level={4}>样例</Typography.Title>
+
+                            <Space direction="vertical" size={16} className="full-width">
+                                {samples.map((sample, index) => (
+                                    <div key={sample.id ?? index}>
+                                        <Typography.Text strong>样例 {index + 1}</Typography.Text>
+
+                                        <div className="sample-grid">
+                                            <div>
+                                                <Typography.Text type="secondary">输入</Typography.Text>
+                                                <pre>{sample.input}</pre>
+                                            </div>
+
+                                            <div>
+                                                <Typography.Text type="secondary">输出</Typography.Text>
+                                                <pre>{sample.expected_output}</pre>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </Space>
+                        </>
+                    )}
+
+                    {problem.hint && (
+                        <>
+                            <Typography.Title level={4}>提示</Typography.Title>
+                            <Alert type="info" message={problem.hint} />
+                        </>
+                    )}
+                </Space>
             </section>
-          )}
-          {problem.hint && <Alert type="info" message={problem.hint} />}
-        </Space>
-      </section>
 
-      <section className="surface submit-pane">
-        <div className="submit-header">
-          <div>
-            <Typography.Text strong>提交代码</Typography.Text>
-            <Typography.Text type="secondary" className="submit-subtitle">
-              标准输入输出，代码不会预置模板
-            </Typography.Text>
-          </div>
-          <Space>
-            <Select
-              value={language}
-              onChange={setLanguage}
-              style={{ width: 112 }}
-              options={[
-                { label: "Go", value: "go" },
-                { label: "C", value: "c" },
-                { label: "C++", value: "cpp" },
-                { label: "Python", value: "python" }
-              ]}
-            />
-            <Button type="primary" icon={<PlayCircleOutlined />} loading={submitting} onClick={submit}>
-              提交
-            </Button>
-          </Space>
-        </div>
-        <Editor
-          height="calc(100vh - 232px)"
-          language={monacoLanguage[language]}
-          theme="vs-dark"
-          value={code}
-          onChange={(value) => setCode(value ?? "")}
-          options={{ minimap: { enabled: false }, fontSize: 14, tabSize: 4, scrollBeyondLastLine: false }}
-        />
-      </section>
-    </main>
-  );
+            <section className="surface submit-pane">
+                <Space direction="vertical" size={16} className="full-width">
+                    <div className="submit-toolbar">
+                        <Select
+                            value={language}
+                            onChange={setLanguage}
+                            options={[
+                                { label: "C++", value: "cpp" },
+                                { label: "C", value: "c" },
+                                { label: "Go", value: "go" },
+                                { label: "Python", value: "python" }
+                            ]}
+                        />
+
+                        <Button
+                            type="primary"
+                            icon={<PlayCircleOutlined />}
+                            loading={submitting}
+                            onClick={submit}
+                        >
+                            提交
+                        </Button>
+                    </div>
+
+                    <Editor
+                        height="70vh"
+                        language={monacoLanguage[language]}
+                        value={code}
+                        onChange={(value) => setCode(value ?? "")}
+                        options={{
+                            minimap: { enabled: false },
+                            fontSize: 14,
+                            tabSize: 2
+                        }}
+                    />
+                </Space>
+            </section>
+        </main>
+    );
 }
