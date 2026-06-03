@@ -385,7 +385,7 @@ export default function ProblemDetailPage() {
                             </Tooltip>
 
                             <Tooltip title="返回题库">
-                                <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/problems")} />
+                                <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/")} />
                             </Tooltip>
                         </Space>
 

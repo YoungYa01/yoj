@@ -143,12 +143,12 @@ export default function AdminTestCasesPage() {
         {
             title: "输入",
             dataIndex: "input",
-            render: (value: string) => <pre className="table-pre">{value}</pre>
+            render: (value: string) => <pre className="test-case-pre">{value || "无输入"}</pre>
         },
         {
             title: "期望输出",
             dataIndex: "expected_output",
-            render: (value: string) => <pre className="table-pre">{value}</pre>
+            render: (value: string) => <pre className="test-case-pre">{value}</pre>
         },
         {
             title: "样例",
@@ -192,6 +192,8 @@ export default function AdminTestCasesPage() {
             </div>
 
             <Table
+                className="test-case-table"
+                tableLayout="fixed"
                 rowKey="id"
                 loading={loading}
                 columns={columns}
