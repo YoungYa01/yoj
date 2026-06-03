@@ -8,6 +8,10 @@ yoj 是一个本地学习用的 Code Online Judge。当前版本实现题库练�
 - 前端：React、TypeScript、Vite、Ant Design、Monaco Editor
 - 判题：本地 Docker Worker
 
+## 图示
+
+<img src="./static/题库.png" width="1000">
+
 ## 本地依赖
 
 - MySQL：默认 `root/root`，数据库名 `yoj`
