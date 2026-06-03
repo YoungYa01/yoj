@@ -1,0 +1,28 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: yoj-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: yoj
+    ports:
+      - "3306:3306"
+    volumes:
+      - yoj-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7
+    container_name: yoj-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - yoj-redis-data:/data
+
+volumes:
+  yoj-mysql-data:
+  yoj-redis-data:

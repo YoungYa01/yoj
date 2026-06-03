@@ -1,0 +1,66 @@
+import { createContext, useContext, useMemo, useState } from "react";
+import { request, User } from "../api/client";
+
+interface AuthContextValue {
+  user: User | null;
+  token: string | null;
+  login: (username: string, password: string) => Promise<void>;
+  register: (username: string, password: string) => Promise<void>;
+  logout: () => void;
+}
+
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+function loadStoredUser() {
+  const raw = localStorage.getItem("yoj_user");
+  if (!raw) {
+    return null;
+  }
+  try {
+    return JSON.parse(raw) as User;
+  } catch {
+    return null;
+  }
+}
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem("yoj_token"));
+  const [user, setUser] = useState<User | null>(() => loadStoredUser());
+
+  async function persistAuth(path: "/auth/login" | "/auth/register", username: string, password: string) {
+    const data = await request<{ token: string; user: User }>(path, {
+      method: "POST",
+      body: JSON.stringify({ username, password })
+    });
+    localStorage.setItem("yoj_token", data.token);
+    localStorage.setItem("yoj_user", JSON.stringify(data.user));
+    setToken(data.token);
+    setUser(data.user);
+  }
+
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      token,
+      login: (username, password) => persistAuth("/auth/login", username, password),
+      register: (username, password) => persistAuth("/auth/register", username, password),
+      logout: () => {
+        localStorage.removeItem("yoj_token");
+        localStorage.removeItem("yoj_user");
+        setToken(null);
+        setUser(null);
+      }
+    }),
+    [user, token]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const value = useContext(AuthContext);
+  if (!value) {
+    throw new Error("useAuth must be used within AuthProvider");
+  }
+  return value;
+}

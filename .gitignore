@@ -1,0 +1,17 @@
+.cache/
+.gopath/
+.idea/
+
+server/*.exe
+server/*.test
+
+web/node_modules/
+web/dist/
+web/.vite/
+web/*.tsbuildinfo
+web/vite.config.d.ts
+web/vite.config.js
+
+.env
+.DS_Store
+Thumbs.db
