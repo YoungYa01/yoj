@@ -220,6 +220,87 @@ a:hover {
   align-items: center;
 }
 
+.submission-filter-panel {
+    padding: 16px;
+    background: #ffffff;
+    border: 1px solid #e3e8f2;
+    border-radius: 10px;
+    box-shadow: 0 10px 24px rgba(16, 24, 40, 0.04);
+}
+
+.submission-filter-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.submission-filter-tip {
+    display: block;
+    margin-top: 3px;
+    font-size: 12px;
+}
+
+.submission-filter-grid {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.9fr) minmax(260px, 1.35fr) minmax(150px, 180px) minmax(140px, 160px) auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.filter-field .ant-input-affix-wrapper,
+.filter-field .ant-select {
+    width: 100%;
+}
+
+.filter-label {
+    font-size: 12px;
+    line-height: 1;
+}
+
+.submission-filter-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.submission-filter-actions .ant-btn {
+    min-width: 76px;
+}
+
+@media (max-width: 1180px) {
+    .submission-filter-grid {
+        grid-template-columns: minmax(180px, 1fr) minmax(240px, 1.4fr) minmax(140px, 180px) minmax(130px, 160px);
+    }
+
+    .submission-filter-actions {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 760px) {
+    .submission-filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .submission-filter-actions {
+        justify-content: stretch;
+    }
+
+    .submission-filter-actions .ant-btn {
+        flex: 1;
+    }
+}
+
 .submissions-toolbar {
   grid-template-columns: minmax(180px, 220px) minmax(140px, 180px) auto;
 }

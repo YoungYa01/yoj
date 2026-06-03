@@ -78,35 +78,48 @@ export default function ProblemDetailPage() {
                     </Button>
 
                     <div className="statement-title-block">
-                        <Typography.Title level={2}>{problem.title}</Typography.Title>
+                        <Typography.Text className="eyebrow">Problem #{problem.id}</Typography.Text>
 
-                        <Space wrap>
-                            <Tag color={difficultyColor[problem.difficulty]}>{problem.difficulty}</Tag>
-                            {problem.tags?.map((tag) => (
-                                <Tag key={tag.id}>{tag.name}</Tag>
+                        <Typography.Title level={1}>{problem.title}</Typography.Title>
+
+                        <Space size={[8, 8]} wrap>
+                            <Tag color={difficultyColor[problem.difficulty] ?? "default"}>
+                                {problem.difficulty}
+                            </Tag>
+
+                            <Tag>{problem.time_limit_ms} ms</Tag>
+                            <Tag>{problem.memory_limit_mb} MB</Tag>
+
+                            {problem.tags.map((tag) => (
+                                <Tag key={tag.id} className="tag-chip">
+                                    {tag.name}
+                                </Tag>
                             ))}
                         </Space>
                     </div>
 
-                    <Divider />
-
-                    <Typography.Title level={4}>题目描述</Typography.Title>
-                    <Typography.Paragraph style={{ whiteSpace: "pre-wrap" }}>
+                    <Typography.Paragraph className="pre-line statement-copy">
                         {problem.description}
                     </Typography.Paragraph>
 
-                    <Typography.Title level={4}>输入说明</Typography.Title>
-                    <Typography.Paragraph style={{ whiteSpace: "pre-wrap" }}>
-                        {problem.input_description}
-                    </Typography.Paragraph>
+                    <Divider />
 
-                    <Typography.Title level={4}>输出说明</Typography.Title>
-                    <Typography.Paragraph style={{ whiteSpace: "pre-wrap" }}>
-                        {problem.output_description}
-                    </Typography.Paragraph>
+                    <section className="statement-section">
+                        <Typography.Title level={4}>输入格式</Typography.Title>
+                        <Typography.Paragraph className="pre-line">
+                            {problem.input_description}
+                        </Typography.Paragraph>
+                    </section>
+
+                    <section className="statement-section">
+                        <Typography.Title level={4}>输出格式</Typography.Title>
+                        <Typography.Paragraph className="pre-line">
+                            {problem.output_description}
+                        </Typography.Paragraph>
+                    </section>
 
                     {samples.length > 0 && (
-                        <>
+                        <section className="statement-section">
                             <Typography.Title level={4}>样例</Typography.Title>
 
                             <Space direction="vertical" size={16} className="full-width">
@@ -114,42 +127,45 @@ export default function ProblemDetailPage() {
                                     <div key={sample.id ?? index}>
                                         <Typography.Text strong>样例 {index + 1}</Typography.Text>
 
-                                        <div className="sample-grid">
+                                        <div className="sample-grid" style={{ marginTop: 8 }}>
                                             <div>
-                                                <Typography.Text type="secondary">输入</Typography.Text>
+                                                <div className="sample-label">输入</div>
                                                 <pre>{sample.input}</pre>
                                             </div>
 
                                             <div>
-                                                <Typography.Text type="secondary">输出</Typography.Text>
+                                                <div className="sample-label">输出</div>
                                                 <pre>{sample.expected_output}</pre>
                                             </div>
                                         </div>
                                     </div>
                                 ))}
                             </Space>
-                        </>
+                        </section>
                     )}
 
-                    {problem.hint && (
-                        <>
-                            <Typography.Title level={4}>提示</Typography.Title>
-                            <Alert type="info" message={problem.hint} />
-                        </>
-                    )}
+                    {problem.hint && <Alert type="info" message={problem.hint} />}
                 </Space>
             </section>
 
             <section className="surface submit-pane">
-                <Space direction="vertical" size={16} className="full-width">
-                    <div className="submit-toolbar">
+                <div className="submit-header">
+                    <div>
+                        <Typography.Text strong>提交代码</Typography.Text>
+                        <Typography.Text type="secondary" className="submit-subtitle">
+                            标准输入输出，代码不会预置模板
+                        </Typography.Text>
+                    </div>
+
+                    <Space>
                         <Select
                             value={language}
                             onChange={setLanguage}
+                            style={{ width: 112 }}
                             options={[
-                                { label: "C++", value: "cpp" },
-                                { label: "C", value: "c" },
                                 { label: "Go", value: "go" },
+                                { label: "C", value: "c" },
+                                { label: "C++", value: "cpp" },
                                 { label: "Python", value: "python" }
                             ]}
                         />
@@ -162,20 +178,22 @@ export default function ProblemDetailPage() {
                         >
                             提交
                         </Button>
-                    </div>
+                    </Space>
+                </div>
 
-                    <Editor
-                        height="70vh"
-                        language={monacoLanguage[language]}
-                        value={code}
-                        onChange={(value) => setCode(value ?? "")}
-                        options={{
-                            minimap: { enabled: false },
-                            fontSize: 14,
-                            tabSize: 2
-                        }}
-                    />
-                </Space>
+                <Editor
+                    height="calc(100vh - 232px)"
+                    language={monacoLanguage[language]}
+                    theme="vs-dark"
+                    value={code}
+                    onChange={(value) => setCode(value ?? "")}
+                    options={{
+                        minimap: { enabled: false },
+                        fontSize: 14,
+                        tabSize: 4,
+                        scrollBeyondLastLine: false
+                    }}
+                />
             </section>
         </main>
     );

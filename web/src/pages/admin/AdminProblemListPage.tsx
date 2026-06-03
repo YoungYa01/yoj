@@ -58,7 +58,8 @@ export default function AdminProblemListPage() {
         {
             title: "难度",
             dataIndex: "difficulty",
-            width: 100
+            width: 100,
+            render: (value: string) => <Tag color={value === "Easy" ? "green" : value === "Medium" ? "blue" : "red"}>{value}</Tag>
         },
         {
             title: "测试点",

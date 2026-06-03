@@ -158,19 +158,45 @@ func (s *Server) adminRejudgeSubmission(c *gin.Context) {
 
 func (s *Server) listSubmissionsWithScope(c *gin.Context, userID uint) {
 	page, pageSize := pagination(c)
-	query := s.db.Model(&model.Submission{}).Preload("User").Preload("Problem").Preload("Contest")
 
+	query := s.db.
+		Model(&model.Submission{}).
+		Preload("User").
+		Preload("Problem").
+		Preload("Contest")
+
+	// 保留 user_id 精确查询，兼容旧链接或从用户管理页跳转过来的场景
 	if userID > 0 {
-		query = query.Where("user_id = ?", userID)
+		query = query.Where("submissions.user_id = ?", userID)
 	}
+
+	// 保留 problem_id 精确查询，兼容旧链接
 	if problemID := queryInt(c, "problem_id", 0); problemID > 0 {
-		query = query.Where("problem_id = ?", problemID)
+		query = query.Where("submissions.problem_id = ?", problemID)
 	}
+
+	// 新增：按用户名模糊查询
+	if userKeyword := strings.ToLower(strings.TrimSpace(c.Query("user_keyword"))); userKeyword != "" {
+		like := "%" + userKeyword + "%"
+		query = query.
+			Joins("JOIN users ON users.id = submissions.user_id").
+			Where("LOWER(users.username) LIKE ?", like)
+	}
+
+	// 新增：按题目标题或 slug 模糊查询
+	if problemKeyword := strings.ToLower(strings.TrimSpace(c.Query("problem_keyword"))); problemKeyword != "" {
+		like := "%" + problemKeyword + "%"
+		query = query.
+			Joins("JOIN problems ON problems.id = submissions.problem_id").
+			Where("LOWER(problems.title) LIKE ? OR LOWER(problems.slug) LIKE ?", like, like)
+	}
+
 	if status := strings.TrimSpace(c.Query("status")); status != "" {
-		query = query.Where("status = ?", status)
+		query = query.Where("submissions.status = ?", status)
 	}
+
 	if language := strings.TrimSpace(c.Query("language")); language != "" {
-		query = query.Where("language = ?", strings.ToLower(language))
+		query = query.Where("submissions.language = ?", strings.ToLower(language))
 	}
 
 	var total int64
@@ -180,7 +206,11 @@ func (s *Server) listSubmissionsWithScope(c *gin.Context, userID uint) {
 	}
 
 	var submissions []model.Submission
-	if err := query.Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&submissions).Error; err != nil {
+	if err := query.
+		Order("submissions.id DESC").
+		Offset((page - 1) * pageSize).
+		Limit(pageSize).
+		Find(&submissions).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "query submissions failed"})
 		return
 	}
@@ -189,6 +219,7 @@ func (s *Server) listSubmissionsWithScope(c *gin.Context, userID uint) {
 	for _, submission := range submissions {
 		items = append(items, toSubmissionResponse(submission, false, false, false, false))
 	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"items":     items,
 		"total":     total,
