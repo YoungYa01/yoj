@@ -68,18 +68,18 @@ export default function AppShell() {
 
 
     const userMenu: MenuProps["items"] = [
-        user?.role !== "admin"
-            ? null
-            : {
-                key: "theme",
-                icon: <SkinOutlined/>,
-                label: <ThemeSettings/>,
-            },
+        {
+            key: "theme",
+            type: "item",
+            icon: <SkinOutlined/>,
+            label: <ThemeSettings/>,
+        },
         {
             type: "divider"
         },
         {
             key: "logout",
+            type: "item",
             icon: <LogoutOutlined/>,
             label: "退出登录",
             onClick: () => {

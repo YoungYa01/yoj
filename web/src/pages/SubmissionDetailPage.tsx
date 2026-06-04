@@ -1,10 +1,11 @@
 import Editor from "@monaco-editor/react";
-import { Alert, Descriptions, Table, Tag, Typography } from "antd";
+import {Alert, Button, Descriptions, Table, Tag, Typography} from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import {Link, useNavigate, useParams} from "react-router-dom";
 import { request, Submission, SubmissionResult } from "../api/client";
 import { statusColor } from "../utils/status";
+import {ArrowLeftOutlined} from "@ant-design/icons";
 
 const monacoLanguage: Record<string, string> = {
   go: "go",
@@ -16,6 +17,7 @@ const monacoLanguage: Record<string, string> = {
 export default function SubmissionDetailPage() {
   const { id } = useParams();
   const [submission, setSubmission] = useState<Submission>();
+  const navigate = useNavigate();
 
   async function load() {
     const data = await request<{ submission: Submission }>(`/submissions/${id}`);
@@ -65,7 +67,10 @@ export default function SubmissionDetailPage() {
 
   return (
     <main className="page-stack">
-      <Typography.Title level={2}>提交 #{submission.id}</Typography.Title>
+      <Typography.Title level={2} className={"main-nav"}>
+          <Button icon={<ArrowLeftOutlined/>} variant={"text"} color={"default"} size={"large"} onClick={() => navigate(-1)}></Button>
+          提交 #{submission.id}
+      </Typography.Title>
       <section className="surface">
         <Descriptions bordered column={{ xs: 1, md: 2 }}>
           <Descriptions.Item label="题目">

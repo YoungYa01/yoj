@@ -20,21 +20,19 @@ import {
     Select,
     Space,
     Spin,
-    Tag,
     Tabs,
+    Tag,
     Tooltip,
     Typography
 } from "antd";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type {
-    CSSProperties,
-    PointerEvent as ReactPointerEvent,
-    UIEvent as ReactUIEvent
-} from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { Contest, ContestProblem, Problem, request, Submission } from "../api/client";
-import { useAuth } from "../state/AuthContext";
-import { useThemeSettings } from "../state/ThemeContext";
+import type {CSSProperties, PointerEvent as ReactPointerEvent, UIEvent as ReactUIEvent} from "react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useNavigate, useParams} from "react-router-dom";
+import {Contest, ContestProblem, Problem, request, Submission} from "../api/client";
+import {useAuth} from "../state/AuthContext";
+import {useThemeSettings} from "../state/ThemeContext";
+import ProblemSubmissionsPanel from "../components/ProblemSubmissionsPanel";
+import SelfTestPanel from "../components/SelfTestPanel";
 
 const monacoLanguage: Record<string, string> = {
     go: "go",
@@ -50,16 +48,16 @@ const difficultyColor: Record<string, string> = {
 };
 
 const contestStatusMeta: Record<string, { label: string; color: string }> = {
-    upcoming: { label: "未开始", color: "blue" },
-    running: { label: "进行中", color: "green" },
-    ended: { label: "已结束", color: "default" }
+    upcoming: {label: "未开始", color: "blue"},
+    running: {label: "进行中", color: "green"},
+    ended: {label: "已结束", color: "default"}
 };
 
 const languageOptions = [
-    { label: "C++", value: "cpp" },
-    { label: "C", value: "c" },
-    { label: "Go", value: "go" },
-    { label: "Python", value: "python" }
+    {label: "C++", value: "cpp"},
+    {label: "C", value: "c"},
+    {label: "Go", value: "go"},
+    {label: "Python", value: "python"}
 ];
 
 function formatRate(value?: number) {
@@ -71,10 +69,10 @@ function getContestProblemTitle(item: ContestProblem) {
 }
 
 export default function ContestProblemPage() {
-    const { id, problemId } = useParams();
+    const {id, problemId} = useParams();
     const navigate = useNavigate();
-    const { user } = useAuth();
-    const { monacoTheme } = useThemeSettings();
+    const {user} = useAuth();
+    const {monacoTheme} = useThemeSettings();
 
     const splitRef = useRef<HTMLDivElement | null>(null);
 
@@ -90,6 +88,7 @@ export default function ContestProblemPage() {
 
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [problemKeyword, setProblemKeyword] = useState("");
+    const [selfTestOpen, setSelfTestOpen] = useState(false);
 
     const [leftWidth, setLeftWidth] = useState(() => {
         const cached = Number(localStorage.getItem("yoj_contest_problem_split_width"));
@@ -250,7 +249,7 @@ export default function ContestProblemPage() {
                 `/contests/${id}/problems/${problemId}/submit`,
                 {
                     method: "POST",
-                    body: JSON.stringify({ language, code })
+                    body: JSON.stringify({language, code})
                 }
             );
 
@@ -301,7 +300,7 @@ export default function ContestProblemPage() {
     if (problemLoading && !problem && !accessError) {
         return (
             <main className="solve-loading">
-                <Spin />
+                <Spin/>
                 <Typography.Text type="secondary">正在加载比赛题目...</Typography.Text>
             </main>
         );
@@ -318,7 +317,7 @@ export default function ContestProblemPage() {
                 />
 
                 <Space>
-                    <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/contests/${id}`)}>
+                    <Button icon={<ArrowLeftOutlined/>} onClick={() => navigate(`/contests/${id}`)}>
                         返回比赛
                     </Button>
 
@@ -335,7 +334,7 @@ export default function ContestProblemPage() {
     if (!contest || !problem) {
         return (
             <main className="solve-loading">
-                <Empty description="比赛题目不存在或暂不可访问" />
+                <Empty description="比赛题目不存在或暂不可访问"/>
                 <Button onClick={() => navigate(`/contests/${id}`)}>返回比赛</Button>
             </main>
         );
@@ -353,12 +352,13 @@ export default function ContestProblemPage() {
                     <header className="solve-problem-tabs">
                         <Space size={8}>
                             <Tooltip title="比赛题目列表">
-                                <Button icon={<MenuOutlined />} variant={"text"} color={"default"} onClick={() => setDrawerOpen(true)} />
+                                <Button icon={<MenuOutlined/>} variant={"text"} color={"default"}
+                                        onClick={() => setDrawerOpen(true)}/>
                             </Tooltip>
 
                             <Tooltip title="返回比赛">
                                 <Button
-                                    icon={<ArrowLeftOutlined />}
+                                    icon={<ArrowLeftOutlined/>}
                                     variant={"text"} color={"default"}
                                     onClick={() => navigate(`/contests/${id}`)}
                                 />
@@ -368,8 +368,8 @@ export default function ContestProblemPage() {
                             activeKey={activeTab}
                             onChange={setActiveTab}
                             items={[
-                                { key: "statement", label: "题目描述" },
-                                { key: "submissions", label: "我的提交" }
+                                {key: "statement", label: "题目描述"},
+                                {key: "submissions", label: "我的提交"}
                             ]}
                         />
 
@@ -477,7 +477,7 @@ export default function ContestProblemPage() {
                                                             <Button
                                                                 type="text"
                                                                 size="small"
-                                                                icon={<CopyOutlined />}
+                                                                icon={<CopyOutlined/>}
                                                                 onClick={() => copyText(sample.input)}
                                                             />
                                                         </div>
@@ -492,7 +492,7 @@ export default function ContestProblemPage() {
                                                             <Button
                                                                 type="text"
                                                                 size="small"
-                                                                icon={<CopyOutlined />}
+                                                                icon={<CopyOutlined/>}
                                                                 onClick={() => copyText(sample.expected_output)}
                                                             />
                                                         </div>
@@ -515,17 +515,20 @@ export default function ContestProblemPage() {
                         </div>
                     ) : (
                         <div className="solve-statement-scroll">
-                            <section className="solve-empty-tab">
-                                <Empty description="这里先跳转到提交记录页查看" />
+                            {user ? (
+                                <ProblemSubmissionsPanel
+                                    endpoint={`/contests/${id}/problems/${problemId}/submissions`}
+                                    emptyText="你还没有在本场比赛的这道题提交过代码"
+                                />
+                            ) : (
+                                <section className="solve-empty-tab">
+                                    <Empty description="登录后可以查看你在本场比赛的提交记录"/>
 
-                                <Space>
-                                    <Button onClick={() => navigate(`/submissions?problem_id=${problem.id}`)}>
-                                        查看此题提交
+                                    <Button type="primary" onClick={() => navigate("/login")}>
+                                        去登录
                                     </Button>
-
-                                    <Button onClick={() => setActiveTab("statement")}>返回题面</Button>
-                                </Space>
-                            </section>
+                                </section>
+                            )}
                         </div>
                     )}
                 </section>
@@ -536,7 +539,7 @@ export default function ContestProblemPage() {
                     role="separator"
                     aria-label="调整题面和编辑器宽度"
                 >
-                    <span />
+                    <span/>
                 </div>
 
                 <section className="solve-right-panel">
@@ -547,12 +550,12 @@ export default function ContestProblemPage() {
                             <Select
                                 value={language}
                                 onChange={setLanguage}
-                                style={{ width: 150 }}
+                                style={{width: 150}}
                                 options={languageOptions}
                             />
 
                             <Tooltip title="清空当前代码">
-                                <Button icon={<ReloadOutlined />} onClick={resetCode} />
+                                <Button icon={<ReloadOutlined/>} onClick={resetCode}/>
                             </Tooltip>
                         </Space>
                     </header>
@@ -565,7 +568,7 @@ export default function ContestProblemPage() {
                             value={code}
                             onChange={(value) => setCode(value ?? "")}
                             options={{
-                                minimap: { enabled: false },
+                                minimap: {enabled: false},
                                 fontSize: 14,
                                 tabSize: 4,
                                 wordWrap: "on",
@@ -580,29 +583,46 @@ export default function ContestProblemPage() {
                         />
                     </div>
 
+                    {
+                        selfTestOpen && (
+                            <SelfTestPanel
+                                endpoint={`/contests/${id}/problems/${problemId}/run`}
+                                language={language}
+                                code={code}
+                                samples={samples}
+                            />
+                        )
+                    }
+
                     <footer className="solve-editor-footer">
                         <div className={user ? "solve-footer-tip" : "solve-footer-tip is-warning"}>
                             {user ? (
                                 <>
-                                    <CodeOutlined />
+                                    <CodeOutlined/>
                                     比赛代码草稿会自动保存在本地
                                 </>
                             ) : (
                                 <>
-                                    <ClockCircleOutlined />
+                                    <ClockCircleOutlined/>
                                     请先登录，登录后才能提交评测
                                 </>
                             )}
                         </div>
 
-                        <Button
-                            type="primary"
-                            icon={<PlayCircleOutlined />}
-                            loading={submitting}
-                            onClick={submit}
-                        >
-                            提交评测
-                        </Button>
+                        <Space>
+                            <Button icon={<PlayCircleOutlined/>} color={"green"} variant={"solid"}
+                                    onClick={() => setSelfTestOpen(!selfTestOpen)}>
+                                在线自测
+                            </Button>
+                            <Button
+                                type="primary"
+                                icon={<PlayCircleOutlined/>}
+                                loading={submitting}
+                                onClick={submit}
+                            >
+                                提交评测
+                            </Button>
+                        </Space>
                     </footer>
                 </section>
             </div>
@@ -619,7 +639,7 @@ export default function ContestProblemPage() {
                     <div className="solve-drawer-filters">
                         <Input
                             allowClear
-                            prefix={<SearchOutlined />}
+                            prefix={<SearchOutlined/>}
                             placeholder="搜索比赛题目 / slug / P1"
                             value={problemKeyword}
                             onChange={(event) => setProblemKeyword(event.target.value)}
@@ -633,7 +653,7 @@ export default function ContestProblemPage() {
                     <div className="solve-problem-list-scroll" onScroll={handleProblemListScroll}>
                         <List
                             dataSource={filteredContestProblems}
-                            locale={{ emptyText: <Empty description="没有找到题目" /> }}
+                            locale={{emptyText: <Empty description="没有找到题目"/>}}
                             renderItem={(item) => {
                                 const isCurrent = String(item.problem_id) === String(problemId);
 

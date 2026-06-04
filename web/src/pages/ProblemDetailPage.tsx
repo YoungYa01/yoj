@@ -10,27 +10,15 @@ import {
     ReloadOutlined,
     SearchOutlined
 } from "@ant-design/icons";
-import {
-    Button,
-    Drawer,
-    Empty,
-    Input,
-    List,
-    message,
-    Select,
-    Space,
-    Spin,
-    Tag,
-    Tabs,
-    Tooltip,
-    Typography
-} from "antd";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, PointerEvent as ReactPointerEvent, UIEvent as ReactUIEvent } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { buildQuery, ListResponse, Problem, request, Submission } from "../api/client";
-import { useAuth } from "../state/AuthContext";
+import {Button, Drawer, Empty, Input, List, message, Select, Space, Spin, Tabs, Tag, Tooltip, Typography} from "antd";
+import type {CSSProperties, PointerEvent as ReactPointerEvent, UIEvent as ReactUIEvent} from "react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useNavigate, useParams} from "react-router-dom";
+import {buildQuery, ListResponse, Problem, request, Submission} from "../api/client";
+import {useAuth} from "../state/AuthContext";
 import {useThemeSettings} from "../state/ThemeContext";
+import ProblemSubmissionsPanel from "../components/ProblemSubmissionsPanel";
+import SelfTestPanel from "../components/SelfTestPanel";
 
 const monacoLanguage: Record<string, string> = {
     go: "go",
@@ -46,16 +34,16 @@ const difficultyColor: Record<string, string> = {
 };
 
 const languageOptions = [
-    { label: "C++", value: "cpp" },
-    { label: "C", value: "c" },
-    { label: "Go", value: "go" },
-    { label: "Python", value: "python" }
+    {label: "C++", value: "cpp"},
+    {label: "C", value: "c"},
+    {label: "Go", value: "go"},
+    {label: "Python", value: "python"}
 ];
 
 const difficultyOptions = [
-    { label: "Easy", value: "Easy" },
-    { label: "Medium", value: "Medium" },
-    { label: "Hard", value: "Hard" }
+    {label: "Easy", value: "Easy"},
+    {label: "Medium", value: "Medium"},
+    {label: "Hard", value: "Hard"}
 ];
 
 const PROBLEM_SWITCH_PAGE_SIZE = 30;
@@ -76,11 +64,11 @@ function problemStateText(problem: Problem) {
     return "未开始";
 }
 
-function ProblemMiniStatus({ problem }: { problem: Problem }) {
+function ProblemMiniStatus({problem}: { problem: Problem }) {
     if (problem.accepted) {
         return (
             <span className="solve-mini-status is-accepted">
-        <CheckCircleFilled />
+        <CheckCircleFilled/>
         AC
       </span>
         );
@@ -89,7 +77,7 @@ function ProblemMiniStatus({ problem }: { problem: Problem }) {
     if (problem.attempted) {
         return (
             <span className="solve-mini-status is-attempted">
-        <ClockCircleOutlined />
+        <ClockCircleOutlined/>
         TRY
       </span>
         );
@@ -99,11 +87,11 @@ function ProblemMiniStatus({ problem }: { problem: Problem }) {
 }
 
 export default function ProblemDetailPage() {
-    const { id } = useParams();
+    const {id} = useParams();
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const {user} = useAuth();
 
-    const { monacoTheme } = useThemeSettings();
+    const {monacoTheme} = useThemeSettings();
 
     const splitRef = useRef<HTMLDivElement | null>(null);
 
@@ -113,6 +101,7 @@ export default function ProblemDetailPage() {
     const [code, setCode] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [activeTab, setActiveTab] = useState("statement");
+    const [selfTestOpen, setSelfTestOpen] = useState(false);
 
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [problemListLoading, setProblemListLoading] = useState(false);
@@ -307,7 +296,7 @@ export default function ProblemDetailPage() {
         try {
             const data = await request<{ submission: Submission }>(`/problems/${id}/submit`, {
                 method: "POST",
-                body: JSON.stringify({ language, code })
+                body: JSON.stringify({language, code})
             });
 
             message.success("提交成功，正在判题");
@@ -359,7 +348,7 @@ export default function ProblemDetailPage() {
     if (problemLoading && !problem) {
         return (
             <main className="solve-loading">
-                <Spin />
+                <Spin/>
                 <Typography.Text type="secondary">正在加载题目...</Typography.Text>
             </main>
         );
@@ -368,7 +357,7 @@ export default function ProblemDetailPage() {
     if (!problem) {
         return (
             <main className="solve-loading">
-                <Empty description="题目不存在或暂不可访问" />
+                <Empty description="题目不存在或暂不可访问"/>
                 <Button onClick={() => navigate("/problems")}>返回题库</Button>
             </main>
         );
@@ -381,11 +370,13 @@ export default function ProblemDetailPage() {
                     <header className="solve-problem-tabs">
                         <Space size={8}>
                             <Tooltip title="题目列表">
-                                <Button icon={<MenuOutlined />} onClick={() => setDrawerOpen(true)} />
+                                <Button icon={<MenuOutlined/>} variant={"text"} color={"default"}
+                                        onClick={() => setDrawerOpen(true)}/>
                             </Tooltip>
 
                             <Tooltip title="返回题库">
-                                <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/")} />
+                                <Button icon={<ArrowLeftOutlined/>} variant={"text"} color={"default"}
+                                        onClick={() => navigate("/")}/>
                             </Tooltip>
                         </Space>
 
@@ -393,8 +384,8 @@ export default function ProblemDetailPage() {
                             activeKey={activeTab}
                             onChange={setActiveTab}
                             items={[
-                                { key: "statement", label: "题目描述" },
-                                { key: "submissions", label: "我的提交" }
+                                {key: "statement", label: "题目描述"},
+                                {key: "submissions", label: "我的提交"}
                             ]}
                         />
                     </header>
@@ -411,7 +402,7 @@ export default function ProblemDetailPage() {
                                         <Typography.Title level={1}>{problem.title}</Typography.Title>
                                     </div>
 
-                                    <ProblemMiniStatus problem={problem} />
+                                    <ProblemMiniStatus problem={problem}/>
                                 </div>
 
                                 <Space size={[8, 8]} wrap>
@@ -490,7 +481,7 @@ export default function ProblemDetailPage() {
                                                             <Button
                                                                 type="text"
                                                                 size="small"
-                                                                icon={<CopyOutlined />}
+                                                                icon={<CopyOutlined/>}
                                                                 onClick={() => copyText(sample.input)}
                                                             />
                                                         </div>
@@ -505,7 +496,7 @@ export default function ProblemDetailPage() {
                                                             <Button
                                                                 type="text"
                                                                 size="small"
-                                                                icon={<CopyOutlined />}
+                                                                icon={<CopyOutlined/>}
                                                                 onClick={() => copyText(sample.expected_output)}
                                                             />
                                                         </div>
@@ -528,17 +519,20 @@ export default function ProblemDetailPage() {
                         </div>
                     ) : (
                         <div className="solve-statement-scroll">
-                            <section className="solve-empty-tab">
-                                <Empty description="这里先跳转到提交记录页查看" />
+                            {user ? (
+                                <ProblemSubmissionsPanel
+                                    endpoint={`/problems/${id}/submissions`}
+                                    emptyText="你还没有在这道题提交过代码"
+                                />
+                            ) : (
+                                <section className="solve-empty-tab">
+                                    <Empty description="登录后可以查看你在这道题的提交记录"/>
 
-                                <Space>
-                                    <Button onClick={() => navigate(`/submissions?problem_id=${problem.id}`)}>
-                                        查看此题提交
+                                    <Button type="primary" onClick={() => navigate("/login")}>
+                                        去登录
                                     </Button>
-
-                                    <Button onClick={() => setActiveTab("statement")}>返回题面</Button>
-                                </Space>
-                            </section>
+                                </section>
+                            )}
                         </div>
                     )}
                 </section>
@@ -549,7 +543,7 @@ export default function ProblemDetailPage() {
                     role="separator"
                     aria-label="调整题面和编辑器宽度"
                 >
-                    <span />
+                    <span/>
                 </div>
 
                 <section className="solve-right-panel">
@@ -560,12 +554,12 @@ export default function ProblemDetailPage() {
                             <Select
                                 value={language}
                                 onChange={setLanguage}
-                                style={{ width: 150 }}
+                                style={{width: 150}}
                                 options={languageOptions}
                             />
 
                             <Tooltip title="清空当前代码">
-                                <Button icon={<ReloadOutlined />} onClick={resetCode} />
+                                <Button icon={<ReloadOutlined/>} onClick={resetCode}/>
                             </Tooltip>
                         </Space>
 
@@ -579,7 +573,7 @@ export default function ProblemDetailPage() {
                             value={code}
                             onChange={(value) => setCode(value ?? "")}
                             options={{
-                                minimap: { enabled: false },
+                                minimap: {enabled: false},
                                 fontSize: 14,
                                 tabSize: 4,
                                 wordWrap: "on",
@@ -594,29 +588,46 @@ export default function ProblemDetailPage() {
                         />
                     </div>
 
+                    {
+                        selfTestOpen && (
+                            <SelfTestPanel
+                                endpoint={`/problems/${id}/run`}
+                                language={language}
+                                code={code}
+                                samples={samples}
+                            />
+                        )
+                    }
+
                     <footer className="solve-editor-footer">
                         <div className={user ? "solve-footer-tip" : "solve-footer-tip is-warning"}>
                             {user ? (
                                 <>
-                                    <CodeOutlined />
+                                    <CodeOutlined/>
                                     代码草稿会自动保存在本地
                                 </>
                             ) : (
                                 <>
-                                    <ClockCircleOutlined />
+                                    <ClockCircleOutlined/>
                                     请先登录，登录后才能提交评测
                                 </>
                             )}
                         </div>
 
-                        <Button
-                            type="primary"
-                            icon={<PlayCircleOutlined />}
-                            loading={submitting}
-                            onClick={submit}
-                        >
-                            提交评测
-                        </Button>
+                        <Space>
+                            <Button icon={<PlayCircleOutlined/>} color={"green"} variant={"solid"}
+                                    onClick={() => setSelfTestOpen(!selfTestOpen)}>
+                                在线自测
+                            </Button>
+                            <Button
+                                type="primary"
+                                icon={<PlayCircleOutlined/>}
+                                loading={submitting}
+                                onClick={submit}
+                            >
+                                提交评测
+                            </Button>
+                        </Space>
                     </footer>
                 </section>
             </div>
@@ -633,7 +644,7 @@ export default function ProblemDetailPage() {
                     <div className="solve-drawer-filters">
                         <Input
                             allowClear
-                            prefix={<SearchOutlined />}
+                            prefix={<SearchOutlined/>}
                             placeholder="搜索题目名称 / slug"
                             value={problemKeyword}
                             onChange={(event) => setProblemKeyword(event.target.value)}
@@ -656,7 +667,7 @@ export default function ProblemDetailPage() {
                         <List
                             loading={problemListLoading}
                             dataSource={problemList}
-                            locale={{ emptyText: <Empty description="没有找到题目" /> }}
+                            locale={{emptyText: <Empty description="没有找到题目"/>}}
                             renderItem={(item) => {
                                 const isCurrent = String(item.id) === String(id);
 
@@ -671,7 +682,7 @@ export default function ProblemDetailPage() {
                                                     #{item.id} {item.title}
                                                 </Typography.Text>
 
-                                                <ProblemMiniStatus problem={item} />
+                                                <ProblemMiniStatus problem={item}/>
                                             </div>
 
                                             <Typography.Text type="secondary" className="solve-switch-slug">
@@ -703,7 +714,7 @@ export default function ProblemDetailPage() {
                         />
 
                         <div className="solve-list-load-state">
-                            {problemListLoadingMore && <Spin size="small" />}
+                            {problemListLoadingMore && <Spin size="small"/>}
 
                             {!problemListLoading && !problemListLoadingMore && problemList.length > 0 && (
                                 problemListHasMore ? (

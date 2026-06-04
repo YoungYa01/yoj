@@ -92,6 +92,105 @@ func (s *Server) listSubmissions(c *gin.Context) {
 	s.listSubmissionsWithScope(c, userID)
 }
 
+func (s *Server) listProblemSubmissions(c *gin.Context) {
+	user, _ := currentUser(c)
+
+	problemID, ok := parseUintParam(c, "id")
+	if !ok {
+		return
+	}
+
+	var problem model.Problem
+	err := s.db.
+		Where("id = ? AND is_published = ?", problemID, true).
+		First(&problem).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "problem not found"})
+		return
+	}
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "query problem failed"})
+		return
+	}
+
+	query := s.db.
+		Model(&model.Submission{}).
+		Preload("User").
+		Preload("Problem").
+		Preload("Contest").
+		Where("submissions.user_id = ?", user.ID).
+		Where("submissions.problem_id = ?", problemID).
+		Where("submissions.contest_id IS NULL")
+
+	s.respondSubmissionList(c, query, user.Role == model.RoleAdmin, true)
+}
+
+func (s *Server) listContestProblemSubmissions(c *gin.Context) {
+	user, _ := currentUser(c)
+
+	contestID, ok := parseUintParam(c, "id")
+	if !ok {
+		return
+	}
+
+	problemID, ok := parseUintParam(c, "problem_id")
+	if !ok {
+		return
+	}
+
+	var contest model.Contest
+	err := s.db.First(&contest, contestID).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "contest not found"})
+		return
+	}
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "query contest failed"})
+		return
+	}
+
+	if user.Role != model.RoleAdmin && !s.isContestJoinedByUser(contest.ID, user.ID) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "join contest before viewing submissions"})
+		return
+	}
+
+	var contestProblem model.ContestProblem
+	err = s.db.
+		Preload("Problem").
+		Where("contest_id = ? AND problem_id = ?", contest.ID, problemID).
+		First(&contestProblem).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "problem not found in contest"})
+		return
+	}
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "query contest problem failed"})
+		return
+	}
+
+	if !contestProblem.Problem.IsPublished && user.Role != model.RoleAdmin {
+		c.JSON(http.StatusNotFound, gin.H{"error": "problem not found"})
+		return
+	}
+
+	query := s.db.
+		Model(&model.Submission{}).
+		Preload("User").
+		Preload("Problem").
+		Preload("Contest").
+		Where("submissions.user_id = ?", user.ID).
+		Where("submissions.problem_id = ?", problemID).
+		Where("submissions.contest_id = ?", contestID)
+
+	s.respondSubmissionList(c, query, user.Role == model.RoleAdmin, true)
+}
+
 func (s *Server) adminListSubmissions(c *gin.Context) {
 	userID := queryInt(c, "user_id", 0)
 	if userID < 0 {
@@ -157,8 +256,6 @@ func (s *Server) adminRejudgeSubmission(c *gin.Context) {
 }
 
 func (s *Server) listSubmissionsWithScope(c *gin.Context, userID uint) {
-	page, pageSize := pagination(c)
-
 	query := s.db.
 		Model(&model.Submission{}).
 		Preload("User").
@@ -199,33 +296,7 @@ func (s *Server) listSubmissionsWithScope(c *gin.Context, userID uint) {
 		query = query.Where("submissions.language = ?", strings.ToLower(language))
 	}
 
-	var total int64
-	if err := query.Count(&total).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "count submissions failed"})
-		return
-	}
-
-	var submissions []model.Submission
-	if err := query.
-		Order("submissions.id DESC").
-		Offset((page - 1) * pageSize).
-		Limit(pageSize).
-		Find(&submissions).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "query submissions failed"})
-		return
-	}
-
-	items := make([]submissionResponse, 0, len(submissions))
-	for _, submission := range submissions {
-		items = append(items, toSubmissionResponse(submission, false, false, false, false))
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"items":     items,
-		"total":     total,
-		"page":      page,
-		"page_size": pageSize,
-	})
+	s.respondSubmissionList(c, query, false, false)
 }
 
 func (s *Server) getSubmission(c *gin.Context) {
@@ -262,4 +333,36 @@ func validLanguage(language string) bool {
 	default:
 		return false
 	}
+}
+
+func (s *Server) respondSubmissionList(c *gin.Context, query *gorm.DB, viewerIsAdmin bool, canViewCode bool) {
+	page, pageSize := pagination(c)
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "count submissions failed"})
+		return
+	}
+
+	var submissions []model.Submission
+	if err := query.
+		Order("submissions.id DESC").
+		Offset((page - 1) * pageSize).
+		Limit(pageSize).
+		Find(&submissions).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "query submissions failed"})
+		return
+	}
+
+	items := make([]submissionResponse, 0, len(submissions))
+	for _, submission := range submissions {
+		items = append(items, toSubmissionResponse(submission, false, false, viewerIsAdmin, canViewCode))
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"items":     items,
+		"total":     total,
+		"page":      page,
+		"page_size": pageSize,
+	})
 }

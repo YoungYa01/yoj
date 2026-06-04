@@ -50,7 +50,9 @@ func NewRouter(deps Dependencies) *gin.Engine {
 
 		api.GET("/problems", server.optionalAuth(), server.listProblems)
 		api.GET("/problems/:id", server.optionalAuth(), server.getProblem)
+		api.GET("/problems/:id/submissions", server.authRequired(), server.listProblemSubmissions)
 		api.POST("/problems/:id/submit", server.authRequired(), server.submitProblem)
+		api.POST("/problems/:id/run", server.authRequired(), server.runProblemSelfTest)
 		api.GET("/tags", server.listTags)
 
 		api.GET("/contests", server.optionalAuth(), server.listContests)
@@ -58,7 +60,9 @@ func NewRouter(deps Dependencies) *gin.Engine {
 		api.POST("/contests/:id/join", server.authRequired(), server.joinContest)
 		api.GET("/contests/:id/standings", server.optionalAuth(), server.getContestStandings)
 		api.GET("/contests/:id/problems/:problem_id", server.authRequired(), server.getContestProblem)
+		api.GET("/contests/:id/problems/:problem_id/submissions", server.authRequired(), server.listContestProblemSubmissions)
 		api.POST("/contests/:id/problems/:problem_id/submit", server.authRequired(), server.submitContestProblem)
+		api.POST("/contests/:id/problems/:problem_id/run", server.authRequired(), server.runContestProblemSelfTest)
 
 		api.GET("/submissions", server.authRequired(), server.listSubmissions)
 		api.GET("/submissions/:id", server.authRequired(), server.getSubmission)

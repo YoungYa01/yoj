@@ -202,3 +202,12 @@ export function buildQuery(params: Record<string, string | number | undefined>) 
   const value = query.toString();
   return value ? `?${value}` : "";
 }
+
+export interface SelfTestResult {
+    status: string;
+    time_used_ms: number;
+    memory_used_kb: number;
+    output: string;
+    expected_output?: string;
+    error_message?: string;
+}
