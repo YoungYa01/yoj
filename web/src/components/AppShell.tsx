@@ -4,34 +4,35 @@ import {
     LoginOutlined,
     LogoutOutlined,
     OrderedListOutlined,
-    SettingOutlined, SkinOutlined,
+    SettingOutlined,
+    SkinOutlined,
     TrophyOutlined,
     UserAddOutlined,
     UserOutlined
 } from "@ant-design/icons";
-import { Avatar, Button, Dropdown, Layout, Space, Typography } from "antd";
-import type { MenuProps } from "antd";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "../state/AuthContext";
+import type {MenuProps} from "antd";
+import {Avatar, Button, Dropdown, Layout, Space, Typography} from "antd";
+import {Outlet, useLocation, useNavigate} from "react-router-dom";
+import {useAuth} from "../state/AuthContext";
 import ThemeSettings from "./ThemeSettings";
 
-const { Header, Content } = Layout;
+const {Header, Content} = Layout;
 
 export default function AppShell() {
     const location = useLocation();
     const navigate = useNavigate();
-    const { user, logout } = useAuth();
+    const {user, logout} = useAuth();
 
     const navItems = [
         {
             key: "/",
-            icon: <DatabaseOutlined />,
+            icon: <DatabaseOutlined/>,
             label: "题库",
             path: "/"
         },
         {
             key: "/contests",
-            icon: <TrophyOutlined />,
+            icon: <TrophyOutlined/>,
             label: "比赛",
             path: "/contests"
         },
@@ -39,7 +40,7 @@ export default function AppShell() {
             ? [
                 {
                     key: "/submissions",
-                    icon: <OrderedListOutlined />,
+                    icon: <OrderedListOutlined/>,
                     label: "提交",
                     path: "/submissions"
                 }
@@ -49,7 +50,7 @@ export default function AppShell() {
             ? [
                 {
                     key: "/admin",
-                    icon: <SettingOutlined />,
+                    icon: <SettingOutlined/>,
                     label: "管理",
                     path: "/admin/dashboard"
                 }
@@ -71,7 +72,7 @@ export default function AppShell() {
             ? null
             : {
                 key: "theme",
-                icon: <SkinOutlined />,
+                icon: <SkinOutlined/>,
                 label: <ThemeSettings/>,
             },
         {
@@ -79,7 +80,7 @@ export default function AppShell() {
         },
         {
             key: "logout",
-            icon: <LogoutOutlined />,
+            icon: <LogoutOutlined/>,
             label: "退出登录",
             onClick: () => {
                 logout();
@@ -93,9 +94,8 @@ export default function AppShell() {
             <Header className="app-header">
                 <button className="brand" type="button" onClick={() => navigate("/")}>
           <span className="brand-mark">
-            <CodeOutlined />
+            <CodeOutlined/>
           </span>
-
                     <span>
             <Typography.Text strong className="brand-name">
               yoj
@@ -120,19 +120,19 @@ export default function AppShell() {
 
                 <Space className="header-actions">
                     {user ? (
-                        <Dropdown menu={{ items: userMenu }} trigger={["click"]}>
-                            <Button className="user-chip">
-                                <Avatar size="small" icon={<UserOutlined />} />
+                        <Dropdown menu={{items: userMenu}} trigger={["click"]}>
+                            <Button variant={"link"} color={"default"} className="user-chip">
+                                <Avatar size="small" icon={<UserOutlined/>}/>
                                 {user.username}
                             </Button>
                         </Dropdown>
                     ) : (
                         <>
-                            <Button icon={<LoginOutlined />} onClick={() => navigate("/login")}>
+                            <Button icon={<LoginOutlined/>} onClick={() => navigate("/login")}>
                                 登录
                             </Button>
 
-                            <Button type="primary" icon={<UserAddOutlined />} onClick={() => navigate("/register")}>
+                            <Button type="primary" icon={<UserAddOutlined/>} onClick={() => navigate("/register")}>
                                 注册
                             </Button>
                         </>
@@ -141,7 +141,7 @@ export default function AppShell() {
             </Header>
 
             <Content className="app-content">
-                <Outlet />
+                <Outlet/>
             </Content>
         </Layout>
     );

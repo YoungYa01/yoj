@@ -1,10 +1,40 @@
 import Editor from "@monaco-editor/react";
-import { ArrowLeftOutlined, PlayCircleOutlined } from "@ant-design/icons";
-import { Alert, Button, Divider, message, Select, Space, Tag, Typography } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import {
+    ArrowLeftOutlined,
+    ClockCircleOutlined,
+    CodeOutlined,
+    CopyOutlined,
+    MenuOutlined,
+    PlayCircleOutlined,
+    ReloadOutlined,
+    SearchOutlined
+} from "@ant-design/icons";
+import {
+    Alert,
+    Button,
+    Drawer,
+    Empty,
+    Input,
+    List,
+    message,
+    Select,
+    Space,
+    Spin,
+    Tag,
+    Tabs,
+    Tooltip,
+    Typography
+} from "antd";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type {
+    CSSProperties,
+    PointerEvent as ReactPointerEvent,
+    UIEvent as ReactUIEvent
+} from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Contest, Problem, request, Submission } from "../api/client";
-import {useThemeSettings} from "../state/ThemeContext";
+import { Contest, ContestProblem, Problem, request, Submission } from "../api/client";
+import { useAuth } from "../state/AuthContext";
+import { useThemeSettings } from "../state/ThemeContext";
 
 const monacoLanguage: Record<string, string> = {
     go: "go",
@@ -19,50 +49,200 @@ const difficultyColor: Record<string, string> = {
     Hard: "red"
 };
 
+const contestStatusMeta: Record<string, { label: string; color: string }> = {
+    upcoming: { label: "未开始", color: "blue" },
+    running: { label: "进行中", color: "green" },
+    ended: { label: "已结束", color: "default" }
+};
+
+const languageOptions = [
+    { label: "C++", value: "cpp" },
+    { label: "C", value: "c" },
+    { label: "Go", value: "go" },
+    { label: "Python", value: "python" }
+];
+
+function formatRate(value?: number) {
+    return `${Number(value ?? 0).toFixed(2)}%`;
+}
+
+function getContestProblemTitle(item: ContestProblem) {
+    return `P${item.sort_order} ${item.problem.title}`;
+}
+
 export default function ContestProblemPage() {
     const { id, problemId } = useParams();
     const navigate = useNavigate();
-
+    const { user } = useAuth();
     const { monacoTheme } = useThemeSettings();
+
+    const splitRef = useRef<HTMLDivElement | null>(null);
 
     const [contest, setContest] = useState<Contest>();
     const [problem, setProblem] = useState<Problem>();
     const [accessError, setAccessError] = useState("");
-    const [language, setLanguage] = useState("go");
+    const [problemLoading, setProblemLoading] = useState(false);
+
+    const [language, setLanguage] = useState("cpp");
     const [code, setCode] = useState("");
     const [submitting, setSubmitting] = useState(false);
+    const [activeTab, setActiveTab] = useState("statement");
 
-    useEffect(() => {
-        setCode("");
-        setAccessError("");
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [problemKeyword, setProblemKeyword] = useState("");
 
-        async function load() {
-            try {
-                const data = await request<{ contest: Contest; problem: Problem }>(
-                    `/contests/${id}/problems/${problemId}`
-                );
-
-                setContest(data.contest);
-                setProblem(data.problem);
-            } catch (error) {
-                setAccessError((error as Error).message);
-
-                const contestData = await request<{ contest: Contest }>(`/contests/${id}`).catch(
-                    () => undefined
-                );
-
-                if (contestData) {
-                    setContest(contestData.contest);
-                }
-            }
-        }
-
-        void load();
-    }, [id, problemId]);
+    const [leftWidth, setLeftWidth] = useState(() => {
+        const cached = Number(localStorage.getItem("yoj_contest_problem_split_width"));
+        return Number.isFinite(cached) && cached >= 34 && cached <= 68 ? cached : 50;
+    });
 
     const samples = useMemo(() => problem?.samples ?? [], [problem]);
 
+    const contestProblems = useMemo(() => {
+        return [...(contest?.problems ?? [])].sort((a, b) => a.sort_order - b.sort_order);
+    }, [contest]);
+
+    const filteredContestProblems = useMemo(() => {
+        const keyword = problemKeyword.trim().toLowerCase();
+
+        if (!keyword) {
+            return contestProblems;
+        }
+
+        return contestProblems.filter((item) => {
+            return (
+                item.problem.title.toLowerCase().includes(keyword) ||
+                item.problem.slug.toLowerCase().includes(keyword) ||
+                `p${item.sort_order}`.includes(keyword)
+            );
+        });
+    }, [contestProblems, problemKeyword]);
+
+    const currentContestProblem = useMemo(() => {
+        return contestProblems.find((item) => String(item.problem_id) === String(problemId));
+    }, [contestProblems, problemId]);
+
+    const draftKey = useMemo(() => {
+        if (!id || !problemId) {
+            return "";
+        }
+
+        return `yoj_contest_${id}_problem_${problemId}_${language}_code`;
+    }, [id, problemId, language]);
+
+    const pageStyle = {
+        "--solve-left-width": `${leftWidth}%`
+    } as CSSProperties;
+
+    const load = useCallback(async () => {
+        if (!id || !problemId) {
+            return;
+        }
+
+        setProblemLoading(true);
+        setAccessError("");
+
+        try {
+            const [problemData, contestData] = await Promise.all([
+                request<{ contest: Contest; problem: Problem }>(
+                    `/contests/${id}/problems/${problemId}`
+                ),
+                request<{ contest: Contest }>(`/contests/${id}`)
+            ]);
+
+            setProblem(problemData.problem);
+            setContest(contestData.contest ?? problemData.contest);
+        } catch (error) {
+            setAccessError((error as Error).message);
+
+            const contestData = await request<{ contest: Contest }>(`/contests/${id}`).catch(
+                () => undefined
+            );
+
+            if (contestData) {
+                setContest(contestData.contest);
+            }
+        } finally {
+            setProblemLoading(false);
+        }
+    }, [id, problemId]);
+
+    useEffect(() => {
+        document.body.classList.add("problem-solve-mode");
+
+        return () => {
+            document.body.classList.remove("problem-solve-mode");
+        };
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem("yoj_contest_problem_split_width", String(leftWidth));
+    }, [leftWidth]);
+
+    useEffect(() => {
+        void load();
+    }, [load]);
+
+    useEffect(() => {
+        if (!draftKey) {
+            return;
+        }
+
+        setCode(localStorage.getItem(draftKey) ?? "");
+    }, [draftKey]);
+
+    useEffect(() => {
+        if (!draftKey) {
+            return;
+        }
+
+        const timer = window.setTimeout(() => {
+            localStorage.setItem(draftKey, code);
+        }, 250);
+
+        return () => {
+            window.clearTimeout(timer);
+        };
+    }, [draftKey, code]);
+
+    function startResize(event: ReactPointerEvent<HTMLDivElement>) {
+        event.preventDefault();
+
+        const container = splitRef.current;
+        if (!container) {
+            return;
+        }
+
+        const rect = container.getBoundingClientRect();
+
+        function handleMove(moveEvent: PointerEvent) {
+            const raw = ((moveEvent.clientX - rect.left) / rect.width) * 100;
+            const next = Math.min(68, Math.max(34, raw));
+            setLeftWidth(next);
+        }
+
+        function handleUp() {
+            window.removeEventListener("pointermove", handleMove);
+            window.removeEventListener("pointerup", handleUp);
+            document.body.classList.remove("problem-resizing");
+        }
+
+        document.body.classList.add("problem-resizing");
+        window.addEventListener("pointermove", handleMove);
+        window.addEventListener("pointerup", handleUp);
+    }
+
     async function submit() {
+        if (!user) {
+            navigate("/login");
+            return;
+        }
+
+        if (!code.trim()) {
+            message.warning("先写点代码再提交吧");
+            return;
+        }
+
         setSubmitting(true);
 
         try {
@@ -83,109 +263,337 @@ export default function ContestProblemPage() {
         }
     }
 
+    function resetCode() {
+        setCode("");
+
+        if (draftKey) {
+            localStorage.removeItem(draftKey);
+        }
+
+        message.success("代码已清空");
+    }
+
+    async function copyText(text: string) {
+        try {
+            await navigator.clipboard.writeText(text);
+            message.success("已复制");
+        } catch {
+            message.warning("复制失败，请手动复制");
+        }
+    }
+
+    function switchContestProblem(item: ContestProblem) {
+        if (String(item.problem_id) === String(problemId)) {
+            setDrawerOpen(false);
+            return;
+        }
+
+        setDrawerOpen(false);
+        setActiveTab("statement");
+        navigate(`/contests/${id}/problems/${item.problem_id}`);
+    }
+
+    function handleProblemListScroll(_event: ReactUIEvent<HTMLDivElement>) {
+        // 比赛题目数量通常不大，当前列表来自 contest.problems，本地过滤即可。
+        // 保留这个函数是为了和普通题目详情页的 Drawer 结构一致。
+    }
+
+    if (problemLoading && !problem && !accessError) {
+        return (
+            <main className="solve-loading">
+                <Spin />
+                <Typography.Text type="secondary">正在加载比赛题目...</Typography.Text>
+            </main>
+        );
+    }
+
     if (accessError) {
         return (
-            <main className="page-stack">
-                <section className="surface">
-                    <Alert type="warning" message="暂不能进入比赛题目" description={accessError} />
+            <main className="solve-loading">
+                <Alert
+                    type="warning"
+                    showIcon
+                    message="暂不能进入比赛题目"
+                    description={accessError}
+                />
 
-                    <Button className="mt-16" onClick={() => navigate(`/contests/${id}`)}>
+                <Space>
+                    <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/contests/${id}`)}>
                         返回比赛
                     </Button>
-                </section>
+
+                    {contest?.joined === false && (
+                        <Button type="primary" onClick={() => navigate(`/contests/${id}`)}>
+                            去报名
+                        </Button>
+                    )}
+                </Space>
             </main>
         );
     }
 
     if (!contest || !problem) {
-        return <main className="page-stack">加载中...</main>;
+        return (
+            <main className="solve-loading">
+                <Empty description="比赛题目不存在或暂不可访问" />
+                <Button onClick={() => navigate(`/contests/${id}`)}>返回比赛</Button>
+            </main>
+        );
     }
 
+    const contestStatus = contestStatusMeta[contest.status] ?? {
+        label: contest.status,
+        color: "default"
+    };
+
     return (
-        <main className="problem-detail-grid">
-            <section className="surface statement-pane">
-                <Space direction="vertical" size={12} className="full-width">
-                    <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(`/contests/${id}`)}>
-                        返回比赛
-                    </Button>
+        <main className="problem-solve-page" style={pageStyle}>
+            <div className="solve-split" ref={splitRef}>
+                <section className="solve-left-panel">
+                    <header className="solve-problem-tabs">
+                        <Space size={8}>
+                            <Tooltip title="比赛题目列表">
+                                <Button icon={<MenuOutlined />} variant={"text"} color={"default"} onClick={() => setDrawerOpen(true)} />
+                            </Tooltip>
 
-                    <div>
-                        <Typography.Text type="secondary">{contest.title}</Typography.Text>
-                        <Typography.Title level={2}>{problem.title}</Typography.Title>
-
-                        <Space wrap>
-                            <Tag color={difficultyColor[problem.difficulty]}>{problem.difficulty}</Tag>
-                            {problem.tags?.map((tag) => (
-                                <Tag key={tag.id}>{tag.name}</Tag>
-                            ))}
+                            <Tooltip title="返回比赛">
+                                <Button
+                                    icon={<ArrowLeftOutlined />}
+                                    variant={"text"} color={"default"}
+                                    onClick={() => navigate(`/contests/${id}`)}
+                                />
+                            </Tooltip>
                         </Space>
-                    </div>
-
-                    <Divider />
-
-                    <Typography.Title level={4}>题目描述</Typography.Title>
-                    <Typography.Paragraph style={{ whiteSpace: "pre-wrap" }}>
-                        {problem.description}
-                    </Typography.Paragraph>
-
-                    <Typography.Title level={4}>输入说明</Typography.Title>
-                    <Typography.Paragraph style={{ whiteSpace: "pre-wrap" }}>
-                        {problem.input_description}
-                    </Typography.Paragraph>
-
-                    <Typography.Title level={4}>输出说明</Typography.Title>
-                    <Typography.Paragraph style={{ whiteSpace: "pre-wrap" }}>
-                        {problem.output_description}
-                    </Typography.Paragraph>
-
-                    {samples.length > 0 && (
-                        <>
-                            <Typography.Title level={4}>样例</Typography.Title>
-
-                            <Space direction="vertical" size={16} className="full-width">
-                                {samples.map((sample, index) => (
-                                    <div key={sample.id ?? index}>
-                                        <Typography.Text strong>样例 {index + 1}</Typography.Text>
-
-                                        <div className="sample-grid">
-                                            <div>
-                                                <Typography.Text type="secondary">输入</Typography.Text>
-                                                <pre>{sample.input}</pre>
-                                            </div>
-
-                                            <div>
-                                                <Typography.Text type="secondary">输出</Typography.Text>
-                                                <pre>{sample.expected_output}</pre>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </Space>
-                        </>
-                    )}
-
-                    {problem.hint && (
-                        <>
-                            <Typography.Title level={4}>提示</Typography.Title>
-                            <Alert type="info" message={problem.hint} />
-                        </>
-                    )}
-                </Space>
-            </section>
-
-            <section className="surface submit-pane">
-                <Space direction="vertical" size={16} className="full-width">
-                    <div className="submit-toolbar">
-                        <Select
-                            value={language}
-                            onChange={setLanguage}
-                            options={[
-                                { label: "Go", value: "go" },
-                                { label: "C++", value: "cpp" },
-                                { label: "C", value: "c" },
-                                { label: "Python", value: "python" }
+                        <Tabs
+                            activeKey={activeTab}
+                            onChange={setActiveTab}
+                            items={[
+                                { key: "statement", label: "题目描述" },
+                                { key: "submissions", label: "我的提交" }
                             ]}
                         />
+
+                    </header>
+
+                    {activeTab === "statement" ? (
+                        <div className="solve-statement-scroll">
+                            <section className="solve-title-block">
+                                <div className="solve-title-row">
+                                    <div>
+                                        <Typography.Text className="solve-problem-id">
+                                            {contest.title}
+                                            {currentContestProblem
+                                                ? ` · P${currentContestProblem.sort_order}`
+                                                : ""}
+                                        </Typography.Text>
+
+                                        <Typography.Title level={1}>{problem.title}</Typography.Title>
+                                    </div>
+
+                                    <span className="solve-mini-status">
+                    {currentContestProblem ? `${currentContestProblem.score} 分` : "比赛"}
+                  </span>
+                                </div>
+
+                                <Space size={[8, 8]} wrap>
+                                    <Tag color={contestStatus.color}>{contestStatus.label}</Tag>
+
+                                    <Tag color={difficultyColor[problem.difficulty] ?? "default"}>
+                                        {problem.difficulty}
+                                    </Tag>
+
+                                    <Tag>{problem.time_limit_ms} ms</Tag>
+                                    <Tag>{problem.memory_limit_mb} MB</Tag>
+
+                                    {problem.tags?.map((tag) => (
+                                        <Tag key={tag.id} className="solve-tag">
+                                            {tag.name}
+                                        </Tag>
+                                    ))}
+                                </Space>
+                            </section>
+
+                            <section className="solve-meta-box">
+                                <div>
+                                    <span>比赛</span>
+                                    <strong>{contest.title}</strong>
+                                </div>
+
+                                <div>
+                                    <span>题号</span>
+                                    <strong>
+                                        {currentContestProblem
+                                            ? `P${currentContestProblem.sort_order}`
+                                            : `#${problem.id}`}
+                                    </strong>
+                                </div>
+
+                                <div>
+                                    <span>分值</span>
+                                    <strong>{currentContestProblem?.score ?? "-"} 分</strong>
+                                </div>
+
+                                <div>
+                                    <span>通过率</span>
+                                    <strong>{formatRate(problem.pass_rate)}</strong>
+                                </div>
+                            </section>
+
+                            <section className="solve-section">
+                                <Typography.Title level={4}>描述</Typography.Title>
+                                <Typography.Paragraph className="solve-pre-line">
+                                    {problem.description}
+                                </Typography.Paragraph>
+                            </section>
+
+                            <section className="solve-section">
+                                <Typography.Title level={4}>输入描述</Typography.Title>
+                                <Typography.Paragraph className="solve-pre-line">
+                                    {problem.input_description}
+                                </Typography.Paragraph>
+                            </section>
+
+                            <section className="solve-section">
+                                <Typography.Title level={4}>输出描述</Typography.Title>
+                                <Typography.Paragraph className="solve-pre-line">
+                                    {problem.output_description}
+                                </Typography.Paragraph>
+                            </section>
+
+                            {samples.length > 0 && (
+                                <section className="solve-section">
+                                    <Typography.Title level={4}>样例</Typography.Title>
+
+                                    <Space direction="vertical" size={16} className="full-width">
+                                        {samples.map((sample, index) => (
+                                            <div className="solve-sample-card" key={sample.id ?? index}>
+                                                <div className="solve-sample-title">样例 {index + 1}</div>
+
+                                                <div className="solve-sample-grid">
+                                                    <div>
+                                                        <div className="solve-sample-label">
+                                                            <span>输入</span>
+
+                                                            <Button
+                                                                type="text"
+                                                                size="small"
+                                                                icon={<CopyOutlined />}
+                                                                onClick={() => copyText(sample.input)}
+                                                            />
+                                                        </div>
+
+                                                        <pre>{sample.input || "无输入"}</pre>
+                                                    </div>
+
+                                                    <div>
+                                                        <div className="solve-sample-label">
+                                                            <span>输出</span>
+
+                                                            <Button
+                                                                type="text"
+                                                                size="small"
+                                                                icon={<CopyOutlined />}
+                                                                onClick={() => copyText(sample.expected_output)}
+                                                            />
+                                                        </div>
+
+                                                        <pre>{sample.expected_output}</pre>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </Space>
+                                </section>
+                            )}
+
+                            {problem.hint && (
+                                <section className="solve-section">
+                                    <Typography.Title level={4}>提示</Typography.Title>
+                                    <div className="solve-hint">{problem.hint}</div>
+                                </section>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="solve-statement-scroll">
+                            <section className="solve-empty-tab">
+                                <Empty description="这里先跳转到提交记录页查看" />
+
+                                <Space>
+                                    <Button onClick={() => navigate(`/submissions?problem_id=${problem.id}`)}>
+                                        查看此题提交
+                                    </Button>
+
+                                    <Button onClick={() => setActiveTab("statement")}>返回题面</Button>
+                                </Space>
+                            </section>
+                        </div>
+                    )}
+                </section>
+
+                <div
+                    className="solve-resizer"
+                    onPointerDown={startResize}
+                    role="separator"
+                    aria-label="调整题面和编辑器宽度"
+                >
+                    <span />
+                </div>
+
+                <section className="solve-right-panel">
+                    <header className="solve-editor-header">
+                        <Space size={8}>
+                            <Typography.Text className="solve-editor-label">语言：</Typography.Text>
+
+                            <Select
+                                value={language}
+                                onChange={setLanguage}
+                                style={{ width: 150 }}
+                                options={languageOptions}
+                            />
+
+                            <Tooltip title="清空当前代码">
+                                <Button icon={<ReloadOutlined />} onClick={resetCode} />
+                            </Tooltip>
+                        </Space>
+                    </header>
+
+                    <div className="solve-editor-area">
+                        <Editor
+                            height="100%"
+                            language={monacoLanguage[language]}
+                            theme={monacoTheme}
+                            value={code}
+                            onChange={(value) => setCode(value ?? "")}
+                            options={{
+                                minimap: { enabled: false },
+                                fontSize: 14,
+                                tabSize: 4,
+                                wordWrap: "on",
+                                smoothScrolling: true,
+                                scrollBeyondLastLine: false,
+                                automaticLayout: true,
+                                padding: {
+                                    top: 12,
+                                    bottom: 12
+                                }
+                            }}
+                        />
+                    </div>
+
+                    <footer className="solve-editor-footer">
+                        <div className={user ? "solve-footer-tip" : "solve-footer-tip is-warning"}>
+                            {user ? (
+                                <>
+                                    <CodeOutlined />
+                                    比赛代码草稿会自动保存在本地
+                                </>
+                            ) : (
+                                <>
+                                    <ClockCircleOutlined />
+                                    请先登录，登录后才能提交评测
+                                </>
+                            )}
+                        </div>
 
                         <Button
                             type="primary"
@@ -193,24 +601,80 @@ export default function ContestProblemPage() {
                             loading={submitting}
                             onClick={submit}
                         >
-                            提交
+                            提交评测
                         </Button>
+                    </footer>
+                </section>
+            </div>
+
+            <Drawer
+                title="比赛题目列表"
+                placement="left"
+                width={440}
+                open={drawerOpen}
+                onClose={() => setDrawerOpen(false)}
+                className="solve-problem-drawer"
+            >
+                <div className="solve-drawer-content">
+                    <div className="solve-drawer-filters">
+                        <Input
+                            allowClear
+                            prefix={<SearchOutlined />}
+                            placeholder="搜索比赛题目 / slug / P1"
+                            value={problemKeyword}
+                            onChange={(event) => setProblemKeyword(event.target.value)}
+                        />
+
+                        <Typography.Text type="secondary" className="solve-drawer-count">
+                            已显示 {filteredContestProblems.length} / {contestProblems.length} 道题
+                        </Typography.Text>
                     </div>
 
-                    <Editor
-                        height="70vh"
-                        theme={monacoTheme}
-                        language={monacoLanguage[language]}
-                        value={code}
-                        onChange={(value) => setCode(value ?? "")}
-                        options={{
-                            minimap: { enabled: false },
-                            fontSize: 14,
-                            tabSize: 2
-                        }}
-                    />
-                </Space>
-            </section>
+                    <div className="solve-problem-list-scroll" onScroll={handleProblemListScroll}>
+                        <List
+                            dataSource={filteredContestProblems}
+                            locale={{ emptyText: <Empty description="没有找到题目" /> }}
+                            renderItem={(item) => {
+                                const isCurrent = String(item.problem_id) === String(problemId);
+
+                                return (
+                                    <List.Item
+                                        className={`solve-problem-switch-item ${
+                                            isCurrent ? "is-current" : ""
+                                        }`}
+                                        onClick={() => switchContestProblem(item)}
+                                    >
+                                        <div className="solve-switch-main">
+                                            <div className="solve-switch-title-row">
+                                                <Typography.Text strong ellipsis>
+                                                    {getContestProblemTitle(item)}
+                                                </Typography.Text>
+
+                                                <span className="solve-mini-status">{item.score} 分</span>
+                                            </div>
+
+                                            <Typography.Text type="secondary" className="solve-switch-slug">
+                                                {item.problem.slug}
+                                            </Typography.Text>
+
+                                            <div className="solve-switch-rate">
+                                                <span>题目 ID #{item.problem_id}</span>
+                                                <span>排序 {item.sort_order}</span>
+                                            </div>
+                                        </div>
+                                    </List.Item>
+                                );
+                            }}
+                        />
+
+                        <div className="solve-list-load-state">
+                            {contestProblems.length > 0 && (
+                                <Typography.Text type="secondary">已经到底啦</Typography.Text>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </Drawer>
         </main>
     );
 }
