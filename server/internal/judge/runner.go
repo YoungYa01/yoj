@@ -71,7 +71,7 @@ func (r *Runner) JudgeSubmission(ctx context.Context, submissionID uint) error {
 		return err
 	}
 
-	lang, ok := languageByName(submission.Language)
+	lang, ok := r.languageByName(submission.Language)
 	if !ok {
 		return r.finishSystemError(&submission, "unsupported language")
 	}
@@ -207,37 +207,47 @@ func (r *Runner) finishSystemError(submission *model.Submission, message string)
 	}).Error
 }
 
-func languageByName(name string) (languageConfig, bool) {
+func (r *Runner) languageByName(name string) (languageConfig, bool) {
 	switch name {
 	case model.LanguageGo:
+		goBin := quoteCommandIfNeeded(r.config.GoBin)
+
 		return languageConfig{
 			SourceFile:           "main.go",
 			Image:                "golang:1.22",
 			DockerCompileCommand: "go build -o main main.go",
 			DockerRunCommand:     "./main < input.txt > output.txt",
-			HostCompileCommand:   fmt.Sprintf("go build -o %s main.go", hostExecutableName("main")),
+			HostCompileCommand:   fmt.Sprintf("%s build -o %s main.go", goBin, hostExecutableName("main")),
 			HostRunCommand:       hostRunCommand("main"),
 		}, true
+
 	case model.LanguageC:
+		cCompiler := quoteCommandIfNeeded(r.config.CCompilerBin)
+
 		return languageConfig{
 			SourceFile:           "main.c",
 			Image:                "gcc:13",
 			DockerCompileCommand: "gcc main.c -O2 -std=c17 -o main",
 			DockerRunCommand:     "./main < input.txt > output.txt",
-			HostCompileCommand:   fmt.Sprintf("gcc main.c -O2 -std=c17 -o %s", hostExecutableName("main")),
+			HostCompileCommand:   fmt.Sprintf("%s main.c -O2 -std=c17 -o %s", cCompiler, hostExecutableName("main")),
 			HostRunCommand:       hostRunCommand("main"),
 		}, true
+
 	case model.LanguageCPP:
+		cppCompiler := quoteCommandIfNeeded(r.config.CPPCompilerBin)
+
 		return languageConfig{
 			SourceFile:           "main.cpp",
 			Image:                "gcc:13",
 			DockerCompileCommand: "g++ main.cpp -O2 -std=c++17 -o main",
 			DockerRunCommand:     "./main < input.txt > output.txt",
-			HostCompileCommand:   fmt.Sprintf("g++ main.cpp -O2 -std=c++17 -o %s", hostExecutableName("main")),
+			HostCompileCommand:   fmt.Sprintf("%s main.cpp -O2 -std=c++17 -o %s", cppCompiler, hostExecutableName("main")),
 			HostRunCommand:       hostRunCommand("main"),
 		}, true
+
 	case model.LanguagePython:
-		python := hostPythonCommand()
+		python := r.hostPythonCommand()
+
 		return languageConfig{
 			SourceFile:           "main.py",
 			Image:                "python:3.12-alpine",
@@ -246,6 +256,7 @@ func languageByName(name string) (languageConfig, bool) {
 			HostCompileCommand:   python + " -m py_compile main.py",
 			HostRunCommand:       python + " main.py < input.txt > output.txt",
 		}, true
+
 	default:
 		return languageConfig{}, false
 	}
@@ -335,9 +346,13 @@ func hostRunCommand(base string) string {
 	return "./" + base + " < input.txt > output.txt"
 }
 
-func hostPythonCommand() string {
+func (r *Runner) hostPythonCommand() string {
+	if configured := strings.TrimSpace(r.config.PythonBin); configured != "" {
+		return quoteCommandIfNeeded(configured)
+	}
+
 	if configured := strings.TrimSpace(os.Getenv("YOJ_PYTHON_BIN")); configured != "" {
-		return normalizePythonCommand(configured)
+		return quoteCommandIfNeeded(configured)
 	}
 
 	candidates := []string{"python3", "python"}
@@ -356,15 +371,11 @@ func hostPythonCommand() string {
 		}
 	}
 
-	if runtime.GOOS == "windows" {
-		return "python"
-	}
-
-	return "python3"
+	return hostPythonMissingCommand()
 }
 
 func pythonCommandWorks(command string) bool {
-	shell, args := hostShell(normalizePythonCommand(command) + " --version")
+	shell, args := hostShell(quoteCommandIfNeeded(command) + " --version")
 	cmd := exec.Command(shell, args...)
 
 	var output bytes.Buffer
@@ -398,21 +409,33 @@ func pythonCommandWorks(command string) bool {
 	return true
 }
 
-func normalizePythonCommand(command string) string {
+func hostPythonMissingCommand() string {
+	message := "Python interpreter not found. Install Python or set YOJ_PYTHON_BIN to the real python.exe path."
+
+	if runtime.GOOS == "windows" {
+		return fmt.Sprintf("echo %s 1>&2 && exit /b 1", message)
+	}
+
+	return fmt.Sprintf("echo '%s' 1>&2 && exit 1", message)
+}
+
+func quoteCommandIfNeeded(command string) string {
 	command = strings.TrimSpace(command)
 
 	if command == "" {
 		return command
 	}
 
-	if runtime.GOOS == "windows" {
-		if strings.HasPrefix(command, `"`) {
-			return command
-		}
+	if runtime.GOOS != "windows" {
+		return command
+	}
 
-		if strings.Contains(command, `\`) && strings.Contains(command, " ") {
-			return `"` + command + `"`
-		}
+	if strings.HasPrefix(command, `"`) {
+		return command
+	}
+
+	if strings.Contains(command, " ") && strings.ContainsAny(command, `\/`) {
+		return `"` + command + `"`
 	}
 
 	return command

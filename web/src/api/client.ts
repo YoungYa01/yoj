@@ -3,15 +3,32 @@ export const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8080/
 export type Role = "user" | "admin";
 
 export interface User {
-  id: number;
-  username: string;
-  role: Role;
+    id: number;
+    username: string;
+    nickname: string;
+    avatar_url: string;
+    cover_url: string;
+    role: Role;
 }
 
 export interface AdminUser extends User {
-  submission_count: number;
-  accepted_count: number;
-  created_at: string;
+    submission_count: number;
+    accepted_count: number;
+    created_at: string;
+}
+
+export interface ProfileStats {
+    total_submissions: number;
+    accepted_submissions: number;
+    solved_problems: number;
+    active_days: number;
+}
+
+export interface ActivityDay {
+    date: string;
+    submissions: number;
+    accepted_submissions: number;
+    solved: number;
 }
 
 export interface Tag {
@@ -167,30 +184,32 @@ export interface ProblemStatusStat {
 }
 
 export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const headers = new Headers(init.headers);
-  if (!(init.body instanceof FormData) && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
-  }
-  const token = localStorage.getItem("yoj_token");
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
-  }
+    const headers = new Headers(init.headers);
 
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers
-  });
+    if (!(init.body instanceof FormData) && !headers.has("Content-Type")) {
+        headers.set("Content-Type", "application/json");
+    }
 
-  if (response.status === 204) {
-    return undefined as T;
-  }
+    const token = localStorage.getItem("yoj_token");
+    if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+    }
 
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.error || "请求失败");
-  }
-  return data as T;
+    const response = await fetch(`${API_BASE}${path}`, { ...init, headers });
+
+    if (response.status === 204) {
+        return undefined as T;
+    }
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+        throw new Error(data.error || "请求失败");
+    }
+
+    return data as T;
 }
+
 
 export function buildQuery(params: Record<string, string | number | undefined>) {
   const query = new URLSearchParams();
@@ -210,4 +229,19 @@ export interface SelfTestResult {
     output: string;
     expected_output?: string;
     error_message?: string;
+}
+
+export function assetURL(value?: string) {
+    if (!value) {
+        return undefined;
+    }
+
+    if (/^https?:\/\//i.test(value)) {
+        return value;
+    }
+
+    const apiRoot = API_BASE.replace(/\/api\/v1\/?$/, "");
+    const path = value.startsWith("/") ? value : `/${value}`;
+
+    return `${apiRoot}${path}`;
 }

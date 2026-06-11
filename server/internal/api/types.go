@@ -10,14 +10,20 @@ import (
 )
 
 type userResponse struct {
-	ID       uint   `json:"id"`
-	Username string `json:"username"`
-	Role     string `json:"role"`
+	ID        uint   `json:"id"`
+	Username  string `json:"username"`
+	Nickname  string `json:"nickname"`
+	AvatarURL string `json:"avatar_url"`
+	CoverURL  string `json:"cover_url"`
+	Role      string `json:"role"`
 }
 
 type adminUserResponse struct {
 	ID              uint   `json:"id"`
 	Username        string `json:"username"`
+	Nickname        string `json:"nickname"`
+	AvatarURL       string `json:"avatar_url"`
+	CoverURL        string `json:"cover_url"`
 	Role            string `json:"role"`
 	SubmissionCount int64  `json:"submission_count"`
 	AcceptedCount   int64  `json:"accepted_count"`
@@ -114,9 +120,12 @@ type submissionResultResponse struct {
 
 func toUserResponse(user model.User) userResponse {
 	return userResponse{
-		ID:       user.ID,
-		Username: user.Username,
-		Role:     user.Role,
+		ID:        user.ID,
+		Username:  user.Username,
+		Nickname:  user.Nickname,
+		AvatarURL: user.AvatarURL,
+		CoverURL:  user.CoverURL,
+		Role:      user.Role,
 	}
 }
 
@@ -124,6 +133,9 @@ func toAdminUserResponse(user model.User, submissionCount int64, acceptedCount i
 	return adminUserResponse{
 		ID:              user.ID,
 		Username:        user.Username,
+		Nickname:        user.Nickname,
+		AvatarURL:       user.AvatarURL,
+		CoverURL:        user.CoverURL,
 		Role:            user.Role,
 		SubmissionCount: submissionCount,
 		AcceptedCount:   acceptedCount,

@@ -30,7 +30,7 @@ type SelfTestResult struct {
 }
 
 func (r *Runner) RunSelfTest(ctx context.Context, req SelfTestRequest) SelfTestResult {
-	lang, ok := languageByName(req.Language)
+	lang, ok := r.languageByName(req.Language)
 	if !ok {
 		return SelfTestResult{
 			Status:       model.StatusSystemError,

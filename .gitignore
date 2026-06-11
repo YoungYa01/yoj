@@ -15,3 +15,6 @@ web/vite.config.js
 .env
 .DS_Store
 Thumbs.db
+
+server/uploads/
+uploads/

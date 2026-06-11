@@ -38,6 +38,7 @@ func NewRouter(deps Dependencies) *gin.Engine {
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
+	router.Static("/uploads", "./uploads")
 
 	api := router.Group("/api/v1")
 	{
@@ -47,6 +48,13 @@ func NewRouter(deps Dependencies) *gin.Engine {
 		auth.POST("/register", server.register)
 		auth.POST("/login", server.login)
 		auth.GET("/me", server.authRequired(), server.me)
+
+		api.GET("/users/me/profile", server.authRequired(), server.getMyProfile)
+		api.PUT("/users/me/profile", server.authRequired(), server.updateMyProfile)
+		api.POST("/users/me/avatar", server.authRequired(), server.uploadMyAvatar)
+		api.POST("/users/me/cover", server.authRequired(), server.uploadMyCover)
+		api.PUT("/users/me/password", server.authRequired(), server.changeMyPassword)
+		api.GET("/users/me/activity", server.authRequired(), server.getMyActivity)
 
 		api.GET("/problems", server.optionalAuth(), server.listProblems)
 		api.GET("/problems/:id", server.optionalAuth(), server.getProblem)

@@ -29,6 +29,9 @@ const (
 type User struct {
 	gorm.Model
 	Username     string `gorm:"type:varchar(64);uniqueIndex;not null"`
+	Nickname     string `gorm:"type:varchar(64);not null;default:''"`
+	AvatarURL    string `gorm:"type:varchar(512);not null;default:''"`
+	CoverURL     string `gorm:"type:varchar(512);not null;default:''"`
 	PasswordHash string `gorm:"type:varchar(255);not null"`
 	Role         string `gorm:"type:varchar(32);not null;default:user"`
 }
