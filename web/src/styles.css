@@ -6,33 +6,33 @@
 
 .app-layout {
     min-height: 100vh;
-    background: var(--yoj-bg);
+    background: transparent;
 }
 
 .app-header {
     position: sticky;
     top: 0;
-    z-index: 20;
+    z-index: 50;
     display: flex;
     align-items: center;
     gap: 22px;
     height: var(--yoj-header-height);
     padding: 0 32px;
-    background: color-mix(in srgb, var(--yoj-surface) 96%, transparent);
+    background: color-mix(in srgb, var(--yoj-surface) 90%, transparent);
     border-bottom: 1px solid var(--yoj-border);
     box-shadow: var(--yoj-shadow-xs);
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(16px);
 }
 
 .app-content {
     width: min(var(--yoj-page-width), calc(100vw - var(--yoj-page-gutter)));
-    margin: 28px auto 48px;
+    margin: 30px auto 56px;
 }
 
 .page-stack {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 20px;
 }
 
 .full-width {
@@ -51,7 +51,8 @@
 .table-action-link {
     height: auto;
     padding: 0;
-    font-weight: 600;
+    color: var(--yoj-primary);
+    font-weight: 700;
 }
 
 /* =========================================================
@@ -59,11 +60,12 @@
    ========================================================= */
 
 .brand {
+    position: relative;
     display: inline-flex;
     align-items: center;
     flex-shrink: 0;
-    gap: 10px;
-    min-width: 150px;
+    gap: 11px;
+    min-width: 154px;
     padding: 0;
     color: var(--yoj-text);
     text-align: left;
@@ -72,22 +74,35 @@
     border: 0;
 }
 
+.brand::after {
+    position: absolute;
+    right: -10px;
+    width: 1px;
+    height: 28px;
+    background: var(--yoj-border);
+    content: "";
+}
+
 .brand-mark {
     display: grid;
     place-items: center;
-    width: 34px;
-    height: 34px;
-    color: #ffffff;
-    background: var(--yoj-primary);
-    border-radius: var(--yoj-radius);
-    box-shadow: 0 8px 16px color-mix(in srgb, var(--yoj-primary) 22%, transparent);
+    width: 36px;
+    height: 36px;
+    color: #fff;
+    background:
+            radial-gradient(circle at 28% 18%, rgba(255,255,255,0.34), transparent 28%),
+            linear-gradient(135deg, var(--yoj-primary), var(--yoj-command));
+    border-radius: 11px;
+    box-shadow: var(--yoj-shadow-command);
 }
 
 .brand-name {
     display: block;
     color: var(--yoj-heading);
+    font-family: var(--yoj-font-display);
     font-size: 18px;
     line-height: 1.05;
+    letter-spacing: -0.04em;
 }
 
 .brand-subtitle {
@@ -102,11 +117,13 @@
     display: flex;
     flex: 1;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     min-width: 0;
+    padding-left: 8px;
 }
 
 .main-nav-item {
+    position: relative;
     display: inline-flex;
     align-items: center;
     gap: 7px;
@@ -119,17 +136,31 @@
     border: 1px solid transparent;
     border-radius: var(--yoj-radius);
     font: inherit;
-    font-weight: 500;
+    font-weight: 650;
+    transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, transform 160ms ease;
 }
 
-.main-nav-item:hover,
-.main-nav-item.is-active {
+.main-nav-item:hover {
     color: var(--yoj-primary);
     background: var(--yoj-primary-soft);
+    transform: translateY(-1px);
 }
 
 .main-nav-item.is-active {
+    color: var(--yoj-primary);
+    background: linear-gradient(180deg, var(--yoj-primary-soft), color-mix(in srgb, var(--yoj-primary-soft) 55%, transparent));
     border-color: var(--yoj-primary-border);
+}
+
+.main-nav-item.is-active::after {
+    position: absolute;
+    right: 12px;
+    bottom: -7px;
+    left: 12px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--yoj-primary), var(--yoj-command));
+    border-radius: 999px;
+    content: "";
 }
 
 .header-actions {
@@ -140,9 +171,12 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding-inline: 8px 12px;
-    cursor: pointer;
-    background-color: transparent;
+    height: 38px;
+    padding-inline: 9px 13px;
+    color: var(--yoj-heading);
+    background: var(--yoj-surface-soft);
+    border: 1px solid var(--yoj-border);
+    border-radius: 999px;
 }
 
 /* =========================================================
@@ -150,7 +184,8 @@
    ========================================================= */
 
 .page-title-row,
-.section-title-row {
+.section-title-row,
+.list-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -159,24 +194,42 @@
 
 .page-title-row h1,
 .page-title-row h2,
-.section-title-row h4 {
+.section-title-row h4,
+.list-header h2 {
     margin: 0;
+    color: var(--yoj-heading);
+    font-family: var(--yoj-font-display);
+    letter-spacing: -0.035em;
 }
 
 .page-hero {
+    position: relative;
     display: flex;
     justify-content: space-between;
     gap: 24px;
-    padding: 2px 0 18px;
+    padding: 4px 0 20px;
     border-bottom: 1px solid var(--yoj-border);
+}
+
+.page-hero::before {
+    position: absolute;
+    top: 12px;
+    left: -18px;
+    width: 4px;
+    height: calc(100% - 28px);
+    background: linear-gradient(180deg, var(--yoj-primary), var(--yoj-command));
+    border-radius: 999px;
+    content: "";
 }
 
 .page-hero.compact h1,
 .page-hero.compact h2 {
-    margin: 4px 0 6px;
+    margin: 4px 0 7px;
     color: var(--yoj-heading);
-    font-size: 30px;
-    line-height: 1.18;
+    font-family: var(--yoj-font-display);
+    font-size: 32px;
+    line-height: 1.12;
+    letter-spacing: -0.045em;
 }
 
 .page-hero.compact .ant-typography {
@@ -186,11 +239,21 @@
 .eyebrow {
     display: inline-flex;
     align-items: center;
+    gap: 6px;
     color: var(--yoj-primary);
+    font-family: var(--yoj-font-mono);
     font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
+    font-weight: 800;
+    letter-spacing: 0.02em;
     text-transform: uppercase;
+}
+
+.eyebrow::before {
+    width: 18px;
+    height: 2px;
+    background: currentColor;
+    border-radius: 999px;
+    content: "";
 }
 
 .hero-metrics {
@@ -208,23 +271,26 @@
 .problem-filter-panel,
 .problem-table-panel,
 .stat-surface {
-    background: var(--yoj-surface);
+    background: color-mix(in srgb, var(--yoj-surface) 96%, transparent);
     border: 1px solid var(--yoj-border);
-    border-radius: var(--yoj-radius);
-    box-shadow: var(--yoj-shadow-md);
+    border-radius: var(--yoj-radius-lg);
+    box-shadow: var(--yoj-shadow-sm);
+    backdrop-filter: blur(10px);
 }
 
 .hero-metrics > div {
-    min-width: 100px;
-    padding: 12px 14px;
+    min-width: 108px;
+    padding: 14px 16px;
 }
 
 .hero-metrics span {
     display: block;
     color: var(--yoj-heading);
-    font-size: 22px;
-    font-weight: 700;
+    font-family: var(--yoj-font-display);
+    font-size: 23px;
+    font-weight: 800;
     line-height: 1;
+    letter-spacing: -0.04em;
 }
 
 .hero-metrics label {
@@ -245,7 +311,7 @@
 
 .surface-toolbar,
 .submission-filter-panel {
-    padding: 14px;
+    padding: 16px;
 }
 
 .table-surface {
@@ -264,23 +330,29 @@
 
 .table-surface .ant-table-thead > tr > th,
 .problem-table-panel .ant-table-thead > tr > th {
+    color: var(--yoj-muted);
+    font-family: var(--yoj-font-mono);
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 800;
     letter-spacing: 0.02em;
     text-transform: uppercase;
 }
 
 .admin-nav {
     display: flex;
+    gap: 6px;
     padding-bottom: 2px;
     overflow-x: auto;
+}
+
+.admin-nav .ant-btn {
+    font-weight: 650;
 }
 
 /* =========================================================
    Ant Design theme-safe overrides
    ========================================================= */
 
-/* 不直接覆盖 .ant-select-selector，避免破坏 variant="borderless"。 */
 .ant-input,
 .ant-input-affix-wrapper,
 .ant-input-number,
@@ -319,6 +391,13 @@
     color: var(--yoj-placeholder) !important;
 }
 
+.ant-input:focus,
+.ant-input-affix-wrapper-focused,
+.ant-select-focused .ant-select-selector {
+    border-color: var(--yoj-primary) !important;
+    box-shadow: 0 0 0 3px var(--yoj-focus) !important;
+}
+
 .ant-table-wrapper .ant-table,
 .ant-table-wrapper .ant-table-container,
 .ant-table-wrapper .ant-table-tbody > tr > td {
@@ -337,6 +416,10 @@
     background: var(--yoj-primary-soft) !important;
 }
 
+.ant-table-wrapper .ant-table-tbody > tr > td:first-child {
+    border-left: 3px solid transparent;
+}
+
 .ant-select-dropdown,
 .ant-dropdown-menu,
 .ant-popover-inner,
@@ -344,6 +427,12 @@
 .ant-drawer-content {
     color: var(--yoj-text) !important;
     background: var(--yoj-surface) !important;
+}
+
+.ant-drawer-header,
+.ant-modal-header {
+    background: var(--yoj-surface) !important;
+    border-color: var(--yoj-border) !important;
 }
 
 .ant-dropdown-menu-item,
@@ -361,6 +450,7 @@
 .ant-btn-primary {
     background: var(--yoj-primary);
     border-color: var(--yoj-primary);
+    box-shadow: 0 8px 18px rgba(var(--yoj-primary-rgb), 0.18);
 }
 
 .ant-btn-primary:hover {
@@ -393,8 +483,18 @@
 }
 
 .submission-filter-panel {
+    position: relative;
+    overflow: hidden;
     padding: 16px;
-    border-radius: var(--yoj-radius-lg);
+}
+
+.submission-filter-panel::before,
+.problem-filter-panel::before {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: linear-gradient(180deg, var(--yoj-primary), var(--yoj-command));
+    content: "";
 }
 
 .submission-filter-header {
@@ -408,6 +508,7 @@
 .submission-filter-tip {
     display: block;
     margin-top: 3px;
+    color: var(--yoj-muted);
     font-size: 12px;
 }
 
@@ -415,8 +516,8 @@
     display: grid;
     grid-template-columns:
     minmax(180px, 0.9fr)
-    minmax(200px, 1.35fr)
-    minmax(200px, 180px)
+    minmax(260px, 1.35fr)
+    minmax(150px, 180px)
     minmax(140px, 160px)
     auto;
     align-items: end;
@@ -439,7 +540,9 @@
 
 .filter-label {
     color: var(--yoj-muted);
+    font-family: var(--yoj-font-mono);
     font-size: 12px;
+    font-weight: 700;
     line-height: 1;
 }
 
@@ -465,12 +568,13 @@
 }
 
 .auth-panel {
-    width: min(420px, 100%);
-    padding: 28px;
+    width: min(430px, 100%);
+    padding: 30px;
 }
 
 .auth-panel h2 {
     margin-top: 6px;
+    color: var(--yoj-heading);
 }
 
 /* =========================================================
@@ -479,14 +583,15 @@
 
 .problem-workbench {
     display: grid;
-    grid-template-columns: 300px minmax(0, 1fr);
+    grid-template-columns: 310px minmax(0, 1fr);
     align-items: start;
-    gap: 16px;
+    gap: 18px;
 }
 
 .problem-filter-panel,
 .problem-table-panel {
-    border-radius: var(--yoj-radius-lg);
+    position: relative;
+    overflow: hidden;
 }
 
 .problem-filter-panel {
@@ -495,11 +600,11 @@
     display: flex;
     flex-direction: column;
     gap: 14px;
-    padding: 16px;
+    padding: 18px 16px 16px 18px;
 }
 
 .problem-table-panel {
-    overflow: hidden;
+    border-radius: var(--yoj-radius-lg);
 }
 
 .filter-panel-title {
@@ -507,7 +612,9 @@
     align-items: center;
     gap: 8px;
     color: var(--yoj-heading);
-    font-weight: 700;
+    font-family: var(--yoj-font-display);
+    font-weight: 800;
+    letter-spacing: -0.02em;
 }
 
 .filter-tag-cloud {
@@ -521,7 +628,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    min-height: 26px;
+    min-height: 27px;
     padding: 0 9px;
     color: var(--yoj-muted);
     cursor: pointer;
@@ -530,6 +637,7 @@
     border-radius: 999px;
     font: inherit;
     font-size: 12px;
+    transition: 160ms ease;
 }
 
 .filter-tag-cloud button:hover,
@@ -537,6 +645,7 @@
     color: var(--yoj-primary);
     background: var(--yoj-primary-soft);
     border-color: var(--yoj-primary-border);
+    transform: translateY(-1px);
 }
 
 .filter-tag-cloud button span {
@@ -547,6 +656,7 @@
 .filter-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    gap: 8px;
 }
 
 .filter-actions .ant-btn {
@@ -566,7 +676,8 @@
     gap: 8px;
     min-width: 0;
     color: var(--yoj-heading);
-    font-weight: 650;
+    font-weight: 750;
+    letter-spacing: -0.01em;
 }
 
 .problem-title-link:hover {
@@ -575,13 +686,15 @@
 
 .problem-id {
     color: var(--yoj-muted);
-    font-weight: 600;
+    font-family: var(--yoj-font-mono);
+    font-weight: 700;
 }
 
 .problem-slug {
     max-width: 460px;
     overflow: hidden;
     color: var(--yoj-muted);
+    font-family: var(--yoj-font-mono);
     font-size: 12px;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -601,10 +714,11 @@
 .problem-status-badge {
     justify-content: center;
     gap: 5px;
-    width: 56px;
-    height: 26px;
+    width: 58px;
+    height: 27px;
+    font-family: var(--yoj-font-mono);
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 800;
 }
 
 .problem-status-badge.is-accepted,
@@ -622,10 +736,10 @@
 }
 
 .difficulty-badge {
-    height: 26px;
-    padding: 0 10px;
+    height: 27px;
+    padding: 0 11px;
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 800;
 }
 
 .difficulty-hard {
@@ -721,7 +835,8 @@
 }
 
 .problem-stat-name {
-    font-weight: 700;
+    font-family: var(--yoj-font-mono);
+    font-weight: 800;
 }
 
 .problem-stat-count,
@@ -730,48 +845,22 @@
     text-align: right;
 }
 
-.stat-accepted {
-    background: #22c55e;
-}
-
-.stat-wrong-answer {
-    background: #ef4444;
-}
-
-.stat-time-limit-exceeded {
-    background: #f97316;
-}
-
-.stat-memory-limit-exceeded {
-    background: #a855f7;
-}
-
-.stat-runtime-error {
-    background: #eab308;
-}
-
-.stat-compile-error {
-    background: #06b6d4;
-}
-
-.stat-system-error {
-    background: #64748b;
-}
-
-.stat-pending {
-    background: #94a3b8;
-}
-
-.stat-judging {
-    background: #3b82f6;
-}
+.stat-accepted { background: #22c55e; }
+.stat-wrong-answer { background: #ef4444; }
+.stat-time-limit-exceeded { background: #f97316; }
+.stat-memory-limit-exceeded { background: #a855f7; }
+.stat-runtime-error { background: #eab308; }
+.stat-compile-error { background: #06b6d4; }
+.stat-system-error { background: #64748b; }
+.stat-pending { background: #94a3b8; }
+.stat-judging { background: #3b82f6; }
 
 .problem-row-accepted > td:first-child {
-    box-shadow: inset 3px 0 0 #10b981;
+    border-left-color: var(--yoj-success) !important;
 }
 
 .problem-row-attempted > td:first-child {
-    box-shadow: inset 3px 0 0 #f59e0b;
+    border-left-color: #f59e0b !important;
 }
 
 /* =========================================================
@@ -782,7 +871,7 @@
     display: grid;
     grid-template-columns: minmax(0, 0.95fr) minmax(430px, 1.05fr);
     align-items: start;
-    gap: 16px;
+    gap: 18px;
 }
 
 .statement-pane,
@@ -794,14 +883,16 @@
 .statement-title-block h1.ant-typography {
     margin: 4px 0 10px;
     color: var(--yoj-heading) !important;
-    font-size: 30px;
-    line-height: 1.2;
+    font-family: var(--yoj-font-display);
+    font-size: 31px;
+    line-height: 1.16;
+    letter-spacing: -0.045em;
 }
 
 .statement-copy {
     color: var(--yoj-text-soft);
     font-size: 15px;
-    line-height: 1.8;
+    line-height: 1.85;
 }
 
 .statement-section h4,
@@ -819,7 +910,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 13px;
     padding: 14px 16px;
     border-bottom: 1px solid var(--yoj-border);
 }
@@ -839,8 +930,9 @@
 .sample-label {
     margin-bottom: 6px;
     color: var(--yoj-muted);
+    font-family: var(--yoj-font-mono);
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 800;
 }
 
 pre {
@@ -855,9 +947,29 @@ pre {
     line-height: 1.55;
 }
 
-.table-pre {
-    max-height: 120px;
+.table-pre,
+.test-case-pre {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    max-height: 180px;
+    margin: 0;
     white-space: pre-wrap;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+}
+
+.test-case-table {
+    width: 100%;
+    overflow: hidden;
+}
+
+.test-case-table .ant-table {
+    table-layout: fixed;
+}
+
+.test-case-table .ant-table-cell {
+    vertical-align: top;
 }
 
 .accepted-icon {
@@ -867,8 +979,6 @@ pre {
 
 /* =========================================================
    Problem Solve Workspace
-   这些类只在你本地已经加入沉浸式题目页时生效；
-   当前仓库没有这些类，保留不会影响旧页面。
    ========================================================= */
 
 body.problem-solve-mode {
@@ -877,7 +987,7 @@ body.problem-solve-mode {
 }
 
 body.problem-solve-mode .app-layout {
-    background: var(--yoj-bg);
+    background: transparent;
 }
 
 body.problem-solve-mode .app-content {
@@ -901,12 +1011,10 @@ body.problem-resizing {
     height: calc(100vh - var(--yoj-header-height));
     overflow: hidden;
     color: var(--yoj-text);
-    background: radial-gradient(
-            circle at 8% 0%,
-            color-mix(in srgb, var(--yoj-primary) 8%, transparent),
-            transparent 26%
-    ),
-    var(--yoj-bg);
+    background:
+            radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--yoj-command) 16%, transparent), transparent 34%),
+            radial-gradient(circle at 82% 12%, color-mix(in srgb, var(--yoj-primary) 12%, transparent), transparent 28%),
+            var(--yoj-bg);
 }
 
 .solve-split {
@@ -935,10 +1043,6 @@ body.problem-resizing {
     min-width: 380px;
     border-right: 0;
     border-radius: var(--yoj-radius-xl) 0 0 var(--yoj-radius-xl);
-
-    ::-webkit-scrollbar {
-        display: none;
-    }
 }
 
 .solve-right-panel {
@@ -992,15 +1096,15 @@ body.problem-resizing {
 }
 
 .solve-problem-tabs {
-    flex: 0 0 48px;
-    min-height: 48px;
+    flex: 0 0 50px;
+    min-height: 50px;
     padding: 0 14px;
     border-bottom: 1px solid var(--yoj-border);
 }
 
 .solve-problem-tabs .ant-tabs {
     min-width: 0;
-    height: 48px;
+    height: 50px;
 }
 
 .solve-problem-tabs .ant-tabs-nav {
@@ -1008,9 +1112,9 @@ body.problem-resizing {
 }
 
 .solve-problem-tabs .ant-tabs-tab {
-    padding: 14px 0;
+    padding: 15px 0;
     color: var(--yoj-muted);
-    font-weight: 600;
+    font-weight: 700;
 }
 
 .solve-problem-tabs .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
@@ -1018,13 +1122,14 @@ body.problem-resizing {
 }
 
 .solve-problem-tabs .ant-tabs-ink-bar {
-    background: var(--yoj-primary);
+    height: 3px;
+    background: linear-gradient(90deg, var(--yoj-primary), var(--yoj-command));
 }
 
 .solve-statement-scroll {
     flex: 1;
     min-height: 0;
-    padding: 22px 24px 32px;
+    padding: 23px 25px 34px;
     overflow-x: hidden;
     overflow-y: auto;
     background: var(--yoj-surface);
@@ -1044,18 +1149,20 @@ body.problem-resizing {
 }
 
 .solve-problem-id,
-.solve-section h4,
 .solve-sample-title,
 .solve-sample-label {
     color: var(--yoj-primary);
+    font-family: var(--yoj-font-mono);
 }
 
 .solve-title-block h1,
 .solve-title-block h1.ant-typography {
     margin: 8px 0 12px;
     color: var(--yoj-heading) !important;
-    font-size: 30px;
-    line-height: 1.22;
+    font-family: var(--yoj-font-display);
+    font-size: 31px;
+    line-height: 1.18;
+    letter-spacing: -0.045em;
 }
 
 .solve-mini-status {
@@ -1070,6 +1177,7 @@ body.problem-resizing {
     background: var(--yoj-surface-soft);
     border: 1px solid var(--yoj-border-soft);
     border-radius: 999px;
+    font-family: var(--yoj-font-mono);
     font-size: 12px;
     font-weight: 800;
 }
@@ -1094,10 +1202,21 @@ body.problem-resizing {
 }
 
 .solve-meta-box > div {
+    position: relative;
     padding: 12px;
+    overflow: hidden;
     background: var(--yoj-surface-soft);
     border: 1px solid var(--yoj-border-soft);
     border-radius: var(--yoj-radius-lg);
+}
+
+.solve-meta-box > div::before {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: var(--yoj-primary);
+    content: "";
+    opacity: 0.6;
 }
 
 .solve-meta-box span {
@@ -1119,18 +1238,20 @@ body.problem-resizing {
 
 .solve-section h4,
 .solve-section h4.ant-typography {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     margin: 0 0 12px;
     color: var(--yoj-heading) !important;
+    font-family: var(--yoj-font-display);
     font-size: 18px;
+    letter-spacing: -0.02em;
 }
 
 .solve-section h4::before {
-    display: inline-block;
     width: 4px;
     height: 16px;
-    margin-right: 8px;
-    vertical-align: -2px;
-    background: var(--yoj-primary);
+    background: linear-gradient(180deg, var(--yoj-primary), var(--yoj-command));
     border-radius: 999px;
     content: "";
 }
@@ -1145,7 +1266,7 @@ body.problem-resizing {
 .solve-sample-title {
     margin-bottom: 10px;
     font-size: 15px;
-    font-weight: 750;
+    font-weight: 800;
 }
 
 .solve-sample-grid {
@@ -1162,7 +1283,7 @@ body.problem-resizing {
     margin-bottom: 6px;
     color: var(--yoj-muted);
     font-size: 12px;
-    font-weight: 750;
+    font-weight: 800;
 }
 
 .solve-sample-card pre {
@@ -1202,19 +1323,22 @@ body.problem-resizing {
 
 .solve-editor-label {
     color: var(--yoj-heading);
-    font-weight: 700;
+    font-weight: 800;
 }
 
 .solve-editor-area {
-    flex: 1;
-    min-height: 0;
+    flex: 1 1 0;
+    min-height: 260px;
     overflow: hidden;
     background: var(--yoj-code-bg);
 }
 
 .solve-editor-footer {
     flex: 0 0 58px;
+    min-height: 58px;
     padding: 10px 18px;
+    z-index: 2;
+    background: var(--yoj-surface);
     border-top: 1px solid var(--yoj-border);
 }
 
@@ -1285,7 +1409,7 @@ body.problem-resizing {
     background: var(--yoj-surface);
     border: 1px solid var(--yoj-border) !important;
     border-radius: var(--yoj-radius-lg);
-    transition: 0.16s ease;
+    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
 .solve-problem-switch-item:hover {
@@ -1319,6 +1443,7 @@ body.problem-resizing {
     display: block;
     margin-top: 3px;
     color: var(--yoj-muted) !important;
+    font-family: var(--yoj-font-mono);
     font-size: 12px;
 }
 
@@ -1341,6 +1466,251 @@ body.problem-resizing {
     justify-content: center;
     min-height: 42px;
     padding: 8px 0 2px;
+}
+
+/* =========================================================
+   Self Test
+   ========================================================= */
+
+.self-test-drawer .ant-drawer-content {
+    background: var(--yoj-bg) !important;
+}
+
+.self-test-drawer .ant-drawer-body {
+    padding: 16px;
+}
+
+/* The self-test area is a compact console, not a second page.
+   It must leave enough room for the editor and keep the submit footer visible. */
+.solve-self-test-dock {
+    flex: 0 0 clamp(176px, 23vh, 238px);
+    max-height: 26vh;
+    min-height: 176px;
+    overflow: hidden;
+    background: var(--yoj-surface);
+    border-top: 1px solid var(--yoj-border);
+}
+
+.self-test-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: 100%;
+    min-height: 0;
+    padding: 9px 12px;
+    overflow: auto;
+    background: var(--yoj-surface);
+}
+
+/* Fallback: if SelfTestPanel is rendered directly in the right panel,
+   still force it to behave like the compact dock. */
+.solve-right-panel > .self-test-panel {
+    flex: 0 0 clamp(176px, 23vh, 238px);
+    max-height: 26vh;
+    min-height: 176px;
+    border-top: 1px solid var(--yoj-border);
+}
+
+.self-test-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+
+.self-test-header .ant-typography {
+    line-height: 1.2;
+}
+
+.self-test-subtitle {
+    display: block;
+    margin-top: 1px;
+    color: var(--yoj-muted);
+    font-size: 12px;
+}
+
+.self-test-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+    min-height: 0;
+}
+
+.self-test-field,
+.self-test-output-field {
+    min-width: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+
+.self-test-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 20px;
+    margin-bottom: 4px;
+    color: var(--yoj-muted);
+    font-family: var(--yoj-font-mono);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.self-test-output-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 20px;
+    margin-bottom: 4px;
+}
+
+.self-test-panel .ant-input {
+    font-family: var(--yoj-font-mono);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.self-test-panel .ant-input-textarea-show-count::after {
+    color: var(--yoj-muted);
+    font-size: 11px;
+    line-height: 1;
+}
+
+.self-test-output,
+.self-test-error {
+    width: 100%;
+    margin: 0;
+    overflow: auto;
+    color: var(--yoj-code-text);
+    background: var(--yoj-code-bg);
+    border: 1px solid var(--yoj-code-border);
+    border-radius: var(--yoj-radius-sm);
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+.self-test-output {
+    height: 78px;
+    min-height: 78px;
+    max-height: 78px;
+    padding: 8px 10px;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.self-test-error {
+    max-height: 92px;
+    padding: 8px 10px;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.self-test-alert {
+    margin-top: 0;
+}
+
+.self-test-alert.ant-alert {
+    padding: 6px 10px;
+    font-size: 12px;
+}
+
+.self-test-alert .ant-alert-message {
+    margin-bottom: 0;
+    font-weight: 700;
+}
+
+.self-test-alert .ant-alert-description {
+    margin-top: 2px;
+}
+
+/* New compact status strip used by the updated SelfTestPanel component. */
+.self-test-message {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    min-height: 34px;
+    padding: 7px 10px;
+    border: 1px solid var(--yoj-border);
+    border-radius: var(--yoj-radius-sm);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.self-test-message strong {
+    display: block;
+    margin-bottom: 1px;
+}
+
+.self-test-message.is-success {
+    color: var(--yoj-success);
+    background: var(--yoj-success-soft);
+    border-color: var(--yoj-success-border);
+}
+
+.self-test-message.is-error {
+    color: var(--yoj-danger);
+    background: var(--yoj-danger-soft);
+    border-color: var(--yoj-danger-border);
+}
+
+.self-test-message.is-warning {
+    color: var(--yoj-warning);
+    background: var(--yoj-warning-soft);
+    border-color: var(--yoj-warning-border);
+}
+
+/* =========================================================
+   Submissions panel in solve page
+   ========================================================= */
+
+.solve-submissions-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.solve-submissions-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--yoj-border-soft);
+}
+
+.solve-submissions-header h4,
+.solve-submissions-header h4.ant-typography {
+    margin: 0 0 4px;
+    color: var(--yoj-heading) !important;
+    font-family: var(--yoj-font-display);
+}
+
+.solve-submissions-panel .ant-table-wrapper {
+    overflow: hidden;
+    border: 1px solid var(--yoj-border);
+    border-radius: var(--yoj-radius-lg);
+}
+
+.solve-submissions-panel .ant-table {
+    background: var(--yoj-surface);
+}
+
+.solve-submissions-panel .ant-table-tbody > tr > td {
+    vertical-align: middle;
+}
+
+.solve-submissions-tip {
+    justify-content: flex-end;
+    width: 100%;
+    font-size: 12px;
 }
 
 /* =========================================================
@@ -1374,9 +1744,11 @@ body.problem-resizing {
    ========================================================= */
 
 .theme-settings-trigger {
+    height: 38px;
     color: var(--yoj-muted);
-    background: var(--yoj-surface);
+    background: var(--yoj-surface-soft);
     border-color: var(--yoj-border);
+    border-radius: 999px;
 }
 
 .theme-settings-trigger:hover {
@@ -1385,10 +1757,30 @@ body.problem-resizing {
     border-color: var(--yoj-primary-border);
 }
 
+.theme-settings-inline-trigger {
+    display: inline-flex;
+    align-items: center;
+    width: 100%;
+    color: inherit;
+    cursor: pointer;
+}
+
+.theme-settings-drawer .ant-drawer-body {
+    background:
+            linear-gradient(180deg, var(--yoj-primary-soft), transparent 160px),
+            var(--yoj-bg);
+}
+
 .theme-setting-section {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 10px;
+    padding: 14px;
+    background: var(--yoj-surface);
+    border: 1px solid var(--yoj-border);
+    border-radius: var(--yoj-radius-lg);
+    box-shadow: var(--yoj-shadow-xs);
 }
 
 .theme-setting-title {
@@ -1396,7 +1788,7 @@ body.problem-resizing {
     align-items: center;
     gap: 8px;
     color: var(--yoj-heading);
-    font-weight: 700;
+    font-weight: 800;
 }
 
 .theme-setting-help {
@@ -1425,7 +1817,7 @@ body.problem-resizing {
     color: var(--yoj-text);
     text-align: left;
     cursor: pointer;
-    background: var(--yoj-surface);
+    background: var(--yoj-surface-soft);
     border: 1px solid var(--yoj-border);
     border-radius: var(--yoj-radius);
     font: inherit;
@@ -1552,9 +1944,14 @@ body.problem-resizing {
         min-width: auto;
     }
 
+    .brand::after {
+        display: none;
+    }
+
     .main-nav {
         order: 3;
         width: 100%;
+        padding-left: 0;
         overflow-x: auto;
     }
 
@@ -1567,6 +1964,10 @@ body.problem-resizing {
     .page-title-row {
         align-items: flex-start;
         flex-direction: column;
+    }
+
+    .page-hero::before {
+        display: none;
     }
 
     .hero-metrics {
@@ -1623,187 +2024,22 @@ body.problem-resizing {
     }
 }
 
-.test-case-table {
-    width: 100%;
-    overflow: hidden;
-}
-
-.test-case-table .ant-table {
-    table-layout: fixed;
-}
-
-.test-case-table .ant-table-cell {
-    vertical-align: top;
-}
-
-.test-case-pre {
-    display: block;
-    width: 100%;
-    max-width: 100%;
-    max-height: 180px;
-    margin: 0;
-    padding: 10px 12px;
-    overflow: auto;
-    color: var(--yoj-code-text);
-    background: var(--yoj-code-bg);
-    border: 1px solid var(--yoj-code-border);
-    border-radius: var(--yoj-radius-sm);
-    font-size: 12px;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    word-break: break-all;
-    overflow-wrap: anywhere;
-}
-
-.test-case-pre::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-.test-case-pre::-webkit-scrollbar-thumb {
-    background: #475569;
-    border-radius: 999px;
-}
-
-.test-case-pre::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.solve-submissions-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-}
-
-.solve-submissions-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid var(--yoj-border-soft);
-}
-
-.solve-submissions-header h4,
-.solve-submissions-header h4.ant-typography {
-    margin: 0 0 4px;
-    color: var(--yoj-heading) !important;
-}
-
-.solve-submissions-panel .ant-table-wrapper {
-    overflow: hidden;
-    border: 1px solid var(--yoj-border);
-    border-radius: var(--yoj-radius-lg);
-}
-
-.solve-submissions-panel .ant-table {
-    background: var(--yoj-surface);
-}
-
-.solve-submissions-panel .ant-table-tbody > tr > td {
-    vertical-align: middle;
-}
-
-.solve-submissions-tip {
-    justify-content: flex-end;
-    width: 100%;
-    font-size: 12px;
-}
-
-.self-test-panel {
-    flex: 0 0 318px;
-    min-height: 260px;
-    padding: 12px 14px;
-    overflow: auto;
-    background: var(--yoj-surface);
-    border-top: 1px solid var(--yoj-border);
-}
-
-.self-test-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 12px;
-}
-
-.self-test-subtitle {
-    display: block;
-    margin-top: 2px;
-    font-size: 12px;
-}
-
-.self-test-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px 12px;
-}
-
-.self-test-field {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-width: 0;
-}
-
-.self-test-label {
-    color: var(--yoj-muted);
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.self-test-output-field {
-    grid-column: 1 / -1;
-    min-width: 0;
-}
-
-.self-test-output-title {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 6px;
-}
-
-.self-test-output,
-.self-test-error {
-    width: 100%;
-    max-height: 120px;
-    margin: 0;
-    overflow: auto;
-    color: var(--yoj-code-text);
-    background: var(--yoj-code-bg);
-    border: 1px solid var(--yoj-code-border);
-    border-radius: var(--yoj-radius-sm);
-    white-space: pre-wrap;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-}
-
-.self-test-output {
-    min-height: 58px;
-    padding: 10px 12px;
-    font-size: 12px;
-    line-height: 1.6;
-}
-
-.self-test-error {
-    max-height: 160px;
-    padding: 8px 10px;
-    font-size: 12px;
-    line-height: 1.6;
-}
-
-.self-test-alert {
-    margin-top: 10px;
-}
 
 @media (max-width: 980px) {
-    .self-test-panel {
+    .solve-self-test-dock,
+    .solve-right-panel > .self-test-panel {
         flex: none;
+        max-height: none;
+        min-height: 0;
     }
 
     .self-test-grid {
         grid-template-columns: 1fr;
+    }
+
+    .self-test-output {
+        height: auto;
+        min-height: 72px;
+        max-height: 140px;
     }
 }

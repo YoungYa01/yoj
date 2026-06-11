@@ -1,71 +1,90 @@
-/* web/src/index.css */
-/* 基础 reset 与主题变量。styles.css 会通过 @import 引入本文件。 */
-
 :root {
   color-scheme: light;
 
-  --yoj-primary: #1d4ed8;
-  --yoj-primary-hover: #1e40af;
-  --yoj-primary-soft: #eef4ff;
-  --yoj-primary-border: #bfd4ff;
+  /* Signature direction: "judge desk" — calm paper surfaces, blue verdict ink, violet command accent. */
+  --yoj-primary: #2563eb;
+  --yoj-primary-hover: #1d4ed8;
+  --yoj-primary-soft: #eff6ff;
+  --yoj-primary-border: #bfdbfe;
+  --yoj-primary-rgb: 37, 99, 235;
+
+  --yoj-command: #7c3aed;
+  --yoj-command-hover: #6d28d9;
+  --yoj-command-soft: #f3e8ff;
+  --yoj-command-border: #ddd6fe;
+  --yoj-command-rgb: 124, 58, 237;
 
   --yoj-success: #059669;
-  --yoj-success-soft: #ecfdf3;
+  --yoj-success-soft: #ecfdf5;
   --yoj-success-border: #bbf7d0;
 
   --yoj-warning: #b45309;
   --yoj-warning-soft: #fffbeb;
   --yoj-warning-border: #fde68a;
 
-  --yoj-danger: #b42318;
-  --yoj-danger-soft: #fff1f3;
+  --yoj-danger: #e11d48;
+  --yoj-danger-soft: #fff1f2;
   --yoj-danger-border: #fecdd3;
 
+  --yoj-info: #0891b2;
+  --yoj-info-soft: #ecfeff;
+  --yoj-info-border: #a5f3fc;
+
   --yoj-bg: #f5f7fb;
+  --yoj-bg-ink: #e7eefb;
   --yoj-surface: #ffffff;
   --yoj-surface-soft: #f8fafc;
-  --yoj-elevated: #ffffff;
+  --yoj-surface-raised: #ffffff;
 
-  --yoj-heading: #111827;
-  --yoj-text: #172033;
+  --yoj-heading: #0f172a;
+  --yoj-text: #1f2937;
   --yoj-text-soft: #344054;
-  --yoj-muted: #667085;
-  --yoj-placeholder: #98a2b3;
+  --yoj-muted: #64748b;
+  --yoj-placeholder: #94a3b8;
 
-  --yoj-border: #e3e8f2;
-  --yoj-border-soft: #edf1f7;
+  --yoj-border: #dbe5f3;
+  --yoj-border-soft: #edf2f7;
+  --yoj-focus: rgba(var(--yoj-primary-rgb), 0.28);
 
-  --yoj-code-bg: #101828;
+  --yoj-code-bg: #0f172a;
+  --yoj-code-bg-soft: #111827;
   --yoj-code-border: #263244;
   --yoj-code-text: #e5e7eb;
 
-  --yoj-shadow-xs: 0 1px 0 rgba(16, 24, 40, 0.02);
-  --yoj-shadow-sm: 0 8px 18px rgba(16, 24, 40, 0.035);
-  --yoj-shadow-md: 0 10px 24px rgba(16, 24, 40, 0.04);
+  --yoj-shadow-xs: 0 1px 0 rgba(15, 23, 42, 0.03);
+  --yoj-shadow-sm: 0 10px 24px rgba(15, 23, 42, 0.06);
+  --yoj-shadow-md: 0 18px 42px rgba(15, 23, 42, 0.08);
+  --yoj-shadow-command: 0 14px 28px rgba(var(--yoj-command-rgb), 0.20);
 
-  --yoj-radius-sm: 7px;
-  --yoj-radius: 8px;
-  --yoj-radius-lg: 10px;
-  --yoj-radius-xl: 12px;
+  --yoj-radius-sm: 8px;
+  --yoj-radius: 10px;
+  --yoj-radius-lg: 14px;
+  --yoj-radius-xl: 18px;
 
   --yoj-header-height: 66px;
-  --yoj-page-width: 1320px;
+  --yoj-page-width: 1360px;
   --yoj-page-gutter: 44px;
 
-  --yoj-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+  --yoj-font-display: "Inter", "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --yoj-font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
     "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
-  --yoj-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    "Liberation Mono", "Courier New", monospace;
+  --yoj-font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
-/* 预留给主题设置：只要根节点设置 data-theme="dark"，页面样式就会跟随。 */
 html[data-theme="dark"] {
   color-scheme: dark;
 
   --yoj-primary: #60a5fa;
   --yoj-primary-hover: #93c5fd;
   --yoj-primary-soft: rgba(96, 165, 250, 0.14);
-  --yoj-primary-border: rgba(96, 165, 250, 0.36);
+  --yoj-primary-border: rgba(96, 165, 250, 0.34);
+  --yoj-primary-rgb: 96, 165, 250;
+
+  --yoj-command: #a78bfa;
+  --yoj-command-hover: #c4b5fd;
+  --yoj-command-soft: rgba(167, 139, 250, 0.13);
+  --yoj-command-border: rgba(167, 139, 250, 0.34);
+  --yoj-command-rgb: 167, 139, 250;
 
   --yoj-success: #34d399;
   --yoj-success-soft: rgba(52, 211, 153, 0.12);
@@ -79,10 +98,15 @@ html[data-theme="dark"] {
   --yoj-danger-soft: rgba(251, 113, 133, 0.12);
   --yoj-danger-border: rgba(251, 113, 133, 0.36);
 
-  --yoj-bg: #0f172a;
+  --yoj-info: #22d3ee;
+  --yoj-info-soft: rgba(34, 211, 238, 0.12);
+  --yoj-info-border: rgba(34, 211, 238, 0.34);
+
+  --yoj-bg: #0b1220;
+  --yoj-bg-ink: #152033;
   --yoj-surface: #111827;
   --yoj-surface-soft: #172033;
-  --yoj-elevated: #1f2937;
+  --yoj-surface-raised: #1f2937;
 
   --yoj-heading: #f8fafc;
   --yoj-text: #e5e7eb;
@@ -92,19 +116,29 @@ html[data-theme="dark"] {
 
   --yoj-border: #263244;
   --yoj-border-soft: #1f2937;
+  --yoj-focus: rgba(var(--yoj-primary-rgb), 0.36);
 
   --yoj-code-bg: #020617;
+  --yoj-code-bg-soft: #0b1120;
   --yoj-code-border: #1e293b;
   --yoj-code-text: #e5e7eb;
 
   --yoj-shadow-xs: 0 1px 0 rgba(0, 0, 0, 0.16);
-  --yoj-shadow-sm: 0 8px 18px rgba(0, 0, 0, 0.2);
-  --yoj-shadow-md: 0 14px 28px rgba(0, 0, 0, 0.24);
+  --yoj-shadow-sm: 0 12px 24px rgba(0, 0, 0, 0.22);
+  --yoj-shadow-md: 0 20px 46px rgba(0, 0, 0, 0.28);
+  --yoj-shadow-command: 0 14px 28px rgba(0, 0, 0, 0.26);
 }
 
 html[data-density="compact"] {
   --yoj-header-height: 58px;
   --yoj-page-gutter: 32px;
+}
+
+html[data-radius="rounded"] {
+  --yoj-radius-sm: 10px;
+  --yoj-radius: 14px;
+  --yoj-radius-lg: 18px;
+  --yoj-radius-xl: 24px;
 }
 
 html,
@@ -113,15 +147,21 @@ body,
   min-height: 100%;
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
   color: var(--yoj-text);
-  background: var(--yoj-bg);
-  font-family: var(--yoj-font-sans);
+  background:
+    linear-gradient(90deg, rgba(var(--yoj-primary-rgb), 0.035) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(var(--yoj-primary-rgb), 0.028) 1px, transparent 1px),
+    var(--yoj-bg);
+  background-size: 44px 44px;
+  font-family: var(--yoj-font-body);
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -155,6 +195,21 @@ svg {
 }
 
 ::selection {
-  color: #ffffff;
+  color: #fff;
   background: var(--yoj-primary);
+}
+
+:focus-visible {
+  outline: 3px solid var(--yoj-focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

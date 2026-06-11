@@ -588,16 +588,17 @@ export default function ProblemDetailPage() {
                         />
                     </div>
 
-                    {
-                        selfTestOpen && (
+                    {selfTestOpen && (
+                        <div className="solve-self-test-dock">
                             <SelfTestPanel
                                 endpoint={`/problems/${id}/run`}
                                 language={language}
                                 code={code}
                                 samples={samples}
+                                onClose={() => setSelfTestOpen(false)}
                             />
-                        )
-                    }
+                        </div>
+                    )}
 
                     <footer className="solve-editor-footer">
                         <div className={user ? "solve-footer-tip" : "solve-footer-tip is-warning"}>

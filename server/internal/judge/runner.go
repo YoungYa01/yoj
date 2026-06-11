@@ -11,9 +11,11 @@ import (
 	"runtime"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/yoj/yoj/server/internal/config"
 	"github.com/yoj/yoj/server/internal/model"
+	"golang.org/x/text/encoding/simplifiedchinese"
 	"gorm.io/gorm"
 )
 
@@ -289,8 +291,8 @@ func runHost(parent context.Context, workDir, command string, timeout time.Durat
 
 	result := executionResult{
 		ExitCode: 0,
-		Stdout:   stdout.String(),
-		Stderr:   stderr.String(),
+		Stdout:   decodeCommandOutput(stdout.Bytes()),
+		Stderr:   decodeCommandOutput(stderr.Bytes()),
 		Duration: duration,
 	}
 
@@ -298,14 +300,17 @@ func runHost(parent context.Context, workDir, command string, timeout time.Durat
 		result.TimedOut = true
 		return result, nil
 	}
+
 	if err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
 			result.ExitCode = exitErr.ExitCode()
 			return result, nil
 		}
+
 		return result, err
 	}
+
 	return result, nil
 }
 
@@ -331,10 +336,105 @@ func hostRunCommand(base string) string {
 }
 
 func hostPythonCommand() string {
+	if configured := strings.TrimSpace(os.Getenv("YOJ_PYTHON_BIN")); configured != "" {
+		return normalizePythonCommand(configured)
+	}
+
+	candidates := []string{"python3", "python"}
+
+	if runtime.GOOS == "windows" {
+		candidates = []string{
+			"py -3",
+			"python3",
+			"python",
+		}
+	}
+
+	for _, candidate := range candidates {
+		if pythonCommandWorks(candidate) {
+			return candidate
+		}
+	}
+
 	if runtime.GOOS == "windows" {
 		return "python"
 	}
+
 	return "python3"
+}
+
+func pythonCommandWorks(command string) bool {
+	shell, args := hostShell(normalizePythonCommand(command) + " --version")
+	cmd := exec.Command(shell, args...)
+
+	var output bytes.Buffer
+	cmd.Stdout = &output
+	cmd.Stderr = &output
+
+	if err := cmd.Run(); err != nil {
+		return false
+	}
+
+	text := strings.ToLower(decodeCommandOutput(output.Bytes()))
+
+	if !strings.Contains(text, "python") {
+		return false
+	}
+
+	badOutputs := []string{
+		"microsoft store",
+		"was not found",
+		"not recognized",
+		"不是内部或外部命令",
+		"不是可运行的程序",
+	}
+
+	for _, bad := range badOutputs {
+		if strings.Contains(text, strings.ToLower(bad)) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func normalizePythonCommand(command string) string {
+	command = strings.TrimSpace(command)
+
+	if command == "" {
+		return command
+	}
+
+	if runtime.GOOS == "windows" {
+		if strings.HasPrefix(command, `"`) {
+			return command
+		}
+
+		if strings.Contains(command, `\`) && strings.Contains(command, " ") {
+			return `"` + command + `"`
+		}
+	}
+
+	return command
+}
+
+func decodeCommandOutput(data []byte) string {
+	if len(data) == 0 {
+		return ""
+	}
+
+	if utf8.Valid(data) {
+		return string(data)
+	}
+
+	if runtime.GOOS == "windows" {
+		decoded, err := simplifiedchinese.GBK.NewDecoder().Bytes(data)
+		if err == nil && utf8.Valid(decoded) {
+			return string(decoded)
+		}
+	}
+
+	return strings.ToValidUTF8(string(data), "�")
 }
 
 func runDocker(parent context.Context, image, workDir, command string, timeout time.Duration, memoryMB int) (executionResult, error) {
@@ -370,8 +470,8 @@ func runDocker(parent context.Context, image, workDir, command string, timeout t
 
 	result := executionResult{
 		ExitCode: 0,
-		Stdout:   stdout.String(),
-		Stderr:   stderr.String(),
+		Stdout:   decodeCommandOutput(stdout.Bytes()),
+		Stderr:   decodeCommandOutput(stderr.Bytes()),
 		Duration: duration,
 	}
 
