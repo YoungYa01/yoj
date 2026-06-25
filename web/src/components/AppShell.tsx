@@ -9,7 +9,7 @@ import {
     UserAddOutlined,
     UserOutlined
 } from "@ant-design/icons";
-import type {MenuProps} from "antd";
+import {Flex, MenuProps} from "antd";
 import {Avatar, Button, Dropdown, Layout, Space, Typography} from "antd";
 import {Outlet, useLocation, useNavigate} from "react-router-dom";
 import {useAuth} from "../state/AuthContext";
@@ -123,13 +123,13 @@ export default function AppShell() {
                     ))}
                 </nav>
 
-                <Space className="header-actions">
+                <Flex gap={20} className="header-actions">
                     <ThemeSettings/>
 
                     {user ? (
                         <Dropdown menu={{items: userMenu}} trigger={["click"]}>
                             <Button className="user-chip">
-                                <Avatar size="small" src={user.avatar_url || undefined} icon={<UserOutlined />} />
+                                <Avatar size="small" src={import.meta.env["VITE_API_URL"] + user.avatar_url || undefined} icon={<UserOutlined />} />
                                 {displayName}
                             </Button>
                         </Dropdown>
@@ -144,7 +144,7 @@ export default function AppShell() {
                             </Button>
                         </>
                     )}
-                </Space>
+                </Flex>
             </Header>
 
             <Content className="app-content">

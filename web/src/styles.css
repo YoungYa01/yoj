@@ -2168,6 +2168,8 @@ body.problem-resizing {
 
 .profile-cover-main {
     min-width: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .profile-display-name.ant-typography {
