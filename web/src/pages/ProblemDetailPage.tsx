@@ -358,7 +358,7 @@ export default function ProblemDetailPage() {
         return (
             <main className="solve-loading">
                 <Empty description="题目不存在或暂不可访问"/>
-                <Button onClick={() => navigate("/problems")}>返回题库</Button>
+                <Button onClick={() => navigate("/")}>返回题库</Button>
             </main>
         );
     }

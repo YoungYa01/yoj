@@ -51,46 +51,11 @@ export default function App() {
                 <Route path="/problems/:id" element={<ProblemDetailPage/>}/>
                 <Route path="/contests" element={<ContestListPage/>}/>
                 <Route path="/contests/:id" element={<ContestDetailPage/>}/>
-                <Route
-                    path="/contests/:id/problems/:problemId"
-                    element={
-                        <RequireAuth>
-                            <ContestProblemPage/>
-                        </RequireAuth>
-                    }
-                />
-                <Route
-                    path="/submissions"
-                    element={
-                        <RequireAuth>
-                            <SubmissionsPage/>
-                        </RequireAuth>
-                    }
-                />
-                <Route
-                    path="/submissions/:id"
-                    element={
-                        <RequireAuth>
-                            <SubmissionDetailPage/>
-                        </RequireAuth>
-                    }
-                />
-                <Route
-                    path="/admin"
-                    element={
-                        <RequireAdmin>
-                            <Navigate to="/admin/dashboard" replace/>
-                        </RequireAdmin>
-                    }
-                />
-                <Route
-                    path="/admin/dashboard"
-                    element={
-                        <RequireAdmin>
-                            <AdminDashboardPage/>
-                        </RequireAdmin>
-                    }
-                />
+                <Route path="/contests/:id/problems/:problemId" element={<RequireAuth><ContestProblemPage/></RequireAuth>}/>
+                <Route path="/submissions" element={<RequireAuth><SubmissionsPage/></RequireAuth>}/>
+                <Route path="/submissions/:id" element={<RequireAuth><SubmissionDetailPage/></RequireAuth>}/>
+                <Route path="/admin" element={<RequireAdmin><Navigate to="/admin/dashboard" replace/></RequireAdmin>}/>
+                <Route path="/admin/dashboard" element={<RequireAdmin><AdminDashboardPage/></RequireAdmin>}/>
                 <Route
                     path="/admin/problems"
                     element={

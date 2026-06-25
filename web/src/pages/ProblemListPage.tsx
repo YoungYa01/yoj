@@ -559,7 +559,7 @@ export default function ProblemListPage() {
                     />
                 </section>
             </section>
-            <footer style={{textAlign: "center", paddingBottom: 16,marginTop: -30}}>
+            <footer style={{textAlign: "center", paddingBottom: 16,marginBottom: -50}}>
                 copyright © {new Date().getFullYear()} &nbsp;
                 <span style={{cursor: "pointer", fontSize: 16, color: "#429172"}}
                       onClick={() => window.open("https://github.com/YoungYa01/yoj")}
