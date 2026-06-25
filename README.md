@@ -105,6 +105,6 @@ npm run dev
 - 支持 Go、C、C++、Python
 - 判题状态：Pending、Judging、Accepted、Wrong Answer、Compile Error、Runtime Error、Time Limit Exceeded、Memory Limit Exceeded、System Error
 
-## 注意
+## 判题的并发模型
 
-当前默认的 host 判题模式会直接在本机执行提交代码，只适合本地学习和可信代码。Docker 模式也只是本地学习版沙箱，不是生产级安全隔离方案。后续如果要公网部署，需要单独强化容器权限、系统调用限制、网络与文件系统隔离、任务超时清理和 Worker 调度。
+<img src="./static/判题并发模型.png">

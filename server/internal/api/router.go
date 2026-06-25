@@ -7,26 +7,30 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"github.com/yoj/yoj/server/internal/config"
+	"github.com/yoj/yoj/server/internal/queue"
 	"gorm.io/gorm"
 )
 
 type Dependencies struct {
-	DB     *gorm.DB
-	Redis  *redis.Client
-	Config config.Config
+	DB         *gorm.DB
+	Redis      *redis.Client
+	Config     config.Config
+	JudgeQueue *queue.Dispatcher
 }
 
 type Server struct {
-	db     *gorm.DB
-	redis  *redis.Client
-	config config.Config
+	db         *gorm.DB
+	redis      *redis.Client
+	config     config.Config
+	judgeQueue *queue.Dispatcher
 }
 
 func NewRouter(deps Dependencies) *gin.Engine {
 	server := &Server{
-		db:     deps.DB,
-		redis:  deps.Redis,
-		config: deps.Config,
+		db:         deps.DB,
+		redis:      deps.Redis,
+		config:     deps.Config,
+		judgeQueue: deps.JudgeQueue,
 	}
 
 	router := gin.Default()

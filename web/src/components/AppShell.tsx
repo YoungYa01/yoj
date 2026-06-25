@@ -153,13 +153,6 @@ export default function AppShell() {
             <Content className="app-content">
                 <Outlet/>
             </Content>
-
-            <footer style={{textAlign: "center", paddingBottom: 16,marginTop: -30}}>
-                copyright © {new Date().getFullYear()} &nbsp;
-                <span style={{cursor: "pointer", fontSize: 16, color: "#429172"}}
-                      onClick={() => window.open("https://github.com/yoj-dev/yoj-frontend")}
-                > yoj-dev</span>
-            </footer>
         </Layout>
     );
 }

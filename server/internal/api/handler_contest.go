@@ -9,7 +9,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/yoj/yoj/server/internal/model"
-	"github.com/yoj/yoj/server/internal/queue"
 	"gorm.io/gorm"
 )
 
@@ -259,6 +258,18 @@ func (s *Server) submitContestProblem(c *gin.Context) {
 		return
 	}
 
+	admission, ok := s.acquireJudgeAdmission(c)
+	if !ok {
+		return
+	}
+
+	published := false
+	defer func() {
+		if !published {
+			s.releaseJudgeAdmission(admission)
+		}
+	}()
+
 	var req submitRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
@@ -298,11 +309,20 @@ func (s *Server) submitContestProblem(c *gin.Context) {
 		return
 	}
 
-	if err := queue.EnqueueJudge(c.Request.Context(), s.redis, s.config.JudgeQueue, submission.ID); err != nil {
-		_ = s.db.Model(&submission).Update("status", model.StatusSystemError).Error
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "enqueue judge task failed"})
+	if err := s.publishJudgeSubmission(admission, submission.ID); err != nil {
+		_ = s.db.Model(&submission).Updates(map[string]any{
+			"status":        model.StatusSystemError,
+			"error_message": "publish judge task failed: " + err.Error(),
+		}).Error
+
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"error": "judge queue unavailable",
+			"code":  "JUDGE_QUEUE_UNAVAILABLE",
+		})
 		return
 	}
+
+	published = true
 
 	submission.User = *user
 	submission.Problem = contestProblem.Problem

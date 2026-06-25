@@ -60,7 +60,7 @@ func (s *Server) adminDashboard(c *gin.Context) {
 		recentItems = append(recentItems, toSubmissionResponse(submission, false, false, true, false))
 	}
 
-	queueLength, _ := s.redis.LLen(c.Request.Context(), s.config.JudgeQueue).Result()
+	judgeQueueStats, _ := s.judgeQueue.Stats(c.Request.Context())
 	passRate := 0.0
 	if submissionCount > 0 {
 		passRate = float64(acceptedSubmissionCount) / float64(submissionCount) * 100
@@ -75,7 +75,12 @@ func (s *Server) adminDashboard(c *gin.Context) {
 			"accepted_submission_count": acceptedSubmissionCount,
 			"pending_submission_count":  pendingSubmissionCount,
 			"judging_submission_count":  judgingSubmissionCount,
-			"judge_queue_length":        queueLength,
+			"judge_queue_length":        judgeQueueStats.Broker.Ready,
+			"judge_queue_consumers":     judgeQueueStats.Broker.Consumers,
+			"judge_capacity_in_use":     judgeQueueStats.Capacity.InUse,
+			"judge_capacity_max":        judgeQueueStats.Capacity.Max,
+			"judge_capacity_left":       judgeQueueStats.Capacity.Available,
+			"judge_circuit_open":        judgeQueueStats.Capacity.InUse >= judgeQueueStats.Capacity.Max,
 			"pass_rate":                 passRate,
 			"generated_at":              time.Now().Format("2006-01-02 15:04:05"),
 		},
