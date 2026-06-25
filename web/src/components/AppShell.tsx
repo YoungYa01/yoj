@@ -3,19 +3,20 @@ import {
     DatabaseOutlined,
     LoginOutlined,
     LogoutOutlined,
-    OrderedListOutlined, ProfileOutlined,
+    OrderedListOutlined,
+    ProfileOutlined,
     SettingOutlined,
     TrophyOutlined,
     UserAddOutlined,
     UserOutlined
 } from "@ant-design/icons";
-import {Flex, MenuProps} from "antd";
-import {Avatar, Button, Dropdown, Layout, Space, Typography} from "antd";
+import {Avatar, Button, Dropdown, Flex, Layout, MenuProps, Typography} from "antd";
 import {Outlet, useLocation, useNavigate} from "react-router-dom";
 import {useAuth} from "../state/AuthContext";
 import ThemeSettings from "./ThemeSettings";
 
-const {Header, Content} = Layout;
+
+const {Header, Content, Footer} = Layout;
 
 export default function AppShell() {
     const location = useLocation();
@@ -129,7 +130,9 @@ export default function AppShell() {
                     {user ? (
                         <Dropdown menu={{items: userMenu}} trigger={["click"]}>
                             <Button className="user-chip">
-                                <Avatar size="small" src={import.meta.env["VITE_API_URL"] + user.avatar_url || undefined} icon={<UserOutlined />} />
+                                <Avatar size="small"
+                                        src={import.meta.env["VITE_API_URL"] + user.avatar_url || undefined}
+                                        icon={<UserOutlined/>}/>
                                 {displayName}
                             </Button>
                         </Dropdown>
@@ -150,6 +153,13 @@ export default function AppShell() {
             <Content className="app-content">
                 <Outlet/>
             </Content>
+
+            <footer style={{textAlign: "center", paddingBottom: 16,marginTop: -30}}>
+                copyright © {new Date().getFullYear()} &nbsp;
+                <span style={{cursor: "pointer", fontSize: 16, color: "#429172"}}
+                      onClick={() => window.open("https://github.com/yoj-dev/yoj-frontend")}
+                > yoj-dev</span>
+            </footer>
         </Layout>
     );
 }
