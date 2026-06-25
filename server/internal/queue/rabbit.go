@@ -27,11 +27,22 @@ type BrokerStats struct {
 	Consumers int `json:"consumers"`
 }
 
+type publisherLane struct {
+	channel *amqp.Channel
+}
+
 type RabbitPublisher struct {
-	connection *amqp.Connection
-	channel    *amqp.Channel
-	queueName  string
-	mu         sync.Mutex
+	connection     *amqp.Connection
+	queueName      string
+	publishTimeout time.Duration
+
+	lanes chan *publisherLane
+
+	inspectChannel *amqp.Channel
+	inspectMu      sync.Mutex
+
+	lifecycleMu sync.RWMutex
+	closed      bool
 }
 
 type RabbitConsumer struct {
@@ -47,29 +58,61 @@ func NewRabbitPublisher(cfg config.Config) (*RabbitPublisher, error) {
 		return nil, fmt.Errorf("connect rabbitmq: %w", err)
 	}
 
-	channel, err := connection.Channel()
+	inspectChannel, err := connection.Channel()
 	if err != nil {
 		_ = connection.Close()
-		return nil, fmt.Errorf("open rabbitmq publisher channel: %w", err)
+		return nil, fmt.Errorf("open rabbitmq inspect channel: %w", err)
 	}
 
-	if err := declareTopology(channel, cfg); err != nil {
-		_ = channel.Close()
+	if err := declareTopology(inspectChannel, cfg); err != nil {
+		_ = inspectChannel.Close()
 		_ = connection.Close()
 		return nil, err
 	}
 
-	if err := channel.Confirm(false); err != nil {
-		_ = channel.Close()
-		_ = connection.Close()
-		return nil, fmt.Errorf("enable rabbitmq publisher confirms: %w", err)
+	laneCount := cfg.RabbitPublishChannels
+	if laneCount <= 0 {
+		laneCount = 1
 	}
 
-	return &RabbitPublisher{
-		connection: connection,
-		channel:    channel,
-		queueName:  cfg.RabbitJudgeQueue,
-	}, nil
+	publisher := &RabbitPublisher{
+		connection:     connection,
+		queueName:      cfg.RabbitJudgeQueue,
+		publishTimeout: cfg.RabbitPublishTimeout(),
+		lanes:          make(chan *publisherLane, laneCount),
+		inspectChannel: inspectChannel,
+	}
+
+	for index := 0; index < laneCount; index++ {
+		lane, err := newPublisherLane(connection)
+		if err != nil {
+			for len(publisher.lanes) > 0 {
+				createdLane := <-publisher.lanes
+				_ = createdLane.channel.Close()
+			}
+			_ = inspectChannel.Close()
+			_ = connection.Close()
+			return nil, fmt.Errorf("create rabbitmq publisher channel %d: %w", index+1, err)
+		}
+
+		publisher.lanes <- lane
+	}
+
+	return publisher, nil
+}
+
+func newPublisherLane(connection *amqp.Connection) (*publisherLane, error) {
+	channel, err := connection.Channel()
+	if err != nil {
+		return nil, fmt.Errorf("open channel: %w", err)
+	}
+
+	if err := channel.Confirm(false); err != nil {
+		_ = channel.Close()
+		return nil, fmt.Errorf("enable publisher confirms: %w", err)
+	}
+
+	return &publisherLane{channel: channel}, nil
 }
 
 func NewRabbitConsumer(ctx context.Context, cfg config.Config) (*RabbitConsumer, error) {
@@ -144,11 +187,30 @@ func (p *RabbitPublisher) PublishTask(ctx context.Context, task JudgeTask) error
 		return fmt.Errorf("marshal judge task: %w", err)
 	}
 
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	p.lifecycleMu.RLock()
+	defer p.lifecycleMu.RUnlock()
 
-	confirmation, err := p.channel.PublishWithDeferredConfirmWithContext(
-		ctx,
+	if p.closed {
+		return errors.New("rabbitmq publisher is closed")
+	}
+
+	lane, err := p.acquireLane(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		p.lanes <- lane
+	}()
+
+	// Start a fresh timeout after a lane has been acquired. The old
+	// single-channel implementation started the timeout before waiting for a
+	// global mutex, so requests at the back of the line expired without ever
+	// reaching RabbitMQ.
+	publishCtx, cancel := p.operationContext(ctx)
+	defer cancel()
+
+	confirmation, err := lane.channel.PublishWithDeferredConfirmWithContext(
+		publishCtx,
 		"",
 		p.queueName,
 		true,
@@ -171,7 +233,7 @@ func (p *RabbitPublisher) PublishTask(ctx context.Context, task JudgeTask) error
 		return errors.New("rabbitmq publisher confirm is unavailable")
 	}
 
-	confirmed, err := confirmation.WaitContext(ctx)
+	confirmed, err := confirmation.WaitContext(publishCtx)
 	if err != nil {
 		return fmt.Errorf("wait rabbitmq publisher confirm: %w", err)
 	}
@@ -182,11 +244,42 @@ func (p *RabbitPublisher) PublishTask(ctx context.Context, task JudgeTask) error
 	return nil
 }
 
-func (p *RabbitPublisher) Inspect(ctx context.Context) (BrokerStats, error) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+func (p *RabbitPublisher) acquireLane(ctx context.Context) (*publisherLane, error) {
+	acquireCtx, cancel := p.operationContext(ctx)
+	defer cancel()
 
-	queue, err := p.channel.QueueInspect(p.queueName)
+	select {
+	case lane := <-p.lanes:
+		return lane, nil
+	case <-acquireCtx.Done():
+		return nil, fmt.Errorf("wait for rabbitmq publish channel: %w", acquireCtx.Err())
+	}
+}
+
+func (p *RabbitPublisher) operationContext(parent context.Context) (context.Context, context.CancelFunc) {
+	if parent == nil {
+		parent = context.Background()
+	}
+
+	if p.publishTimeout <= 0 {
+		return context.WithCancel(parent)
+	}
+
+	return context.WithTimeout(parent, p.publishTimeout)
+}
+
+func (p *RabbitPublisher) Inspect(ctx context.Context) (BrokerStats, error) {
+	p.lifecycleMu.RLock()
+	defer p.lifecycleMu.RUnlock()
+
+	if p.closed {
+		return BrokerStats{}, errors.New("rabbitmq publisher is closed")
+	}
+
+	p.inspectMu.Lock()
+	defer p.inspectMu.Unlock()
+
+	queue, err := p.inspectChannel.QueueInspect(p.queueName)
 	if err != nil {
 		return BrokerStats{}, fmt.Errorf("inspect rabbitmq judge queue: %w", err)
 	}
@@ -198,15 +291,33 @@ func (p *RabbitPublisher) Inspect(ctx context.Context) (BrokerStats, error) {
 }
 
 func (p *RabbitPublisher) Close() error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	p.lifecycleMu.Lock()
+	defer p.lifecycleMu.Unlock()
+
+	if p.closed {
+		return nil
+	}
+	p.closed = true
 
 	var errs []error
-	if p.channel != nil {
-		if err := p.channel.Close(); err != nil && !errors.Is(err, amqp.ErrClosed) {
+
+	// The write lock guarantees that no PublishTask call is still borrowing a
+	// lane, so every channel can be drained and closed deterministically.
+	for index := 0; index < cap(p.lanes); index++ {
+		lane := <-p.lanes
+		if lane != nil && lane.channel != nil {
+			if err := lane.channel.Close(); err != nil && !errors.Is(err, amqp.ErrClosed) {
+				errs = append(errs, err)
+			}
+		}
+	}
+
+	if p.inspectChannel != nil {
+		if err := p.inspectChannel.Close(); err != nil && !errors.Is(err, amqp.ErrClosed) {
 			errs = append(errs, err)
 		}
 	}
+
 	if p.connection != nil {
 		if err := p.connection.Close(); err != nil && !errors.Is(err, amqp.ErrClosed) {
 			errs = append(errs, err)

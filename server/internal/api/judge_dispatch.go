@@ -38,15 +38,14 @@ func (s *Server) acquireJudgeAdmission(c *gin.Context) (*queue.Admission, bool) 
 }
 
 func (s *Server) publishJudgeSubmission(admission *queue.Admission, submissionID uint) error {
-	timeout := s.config.RabbitPublishTimeout()
-	if timeout <= 0 {
-		timeout = 5 * time.Second
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	return s.judgeQueue.Publish(ctx, admission, submissionID)
+	// RabbitPublisher applies two independent timeouts:
+	// 1. waiting for a free publish channel;
+	// 2. publishing and waiting for the broker confirm.
+	//
+	// Do not start one shared timeout before the local channel wait, otherwise
+	// concurrent requests at the back of the queue can expire without
+	// publishing anything.
+	return s.judgeQueue.Publish(context.Background(), admission, submissionID)
 }
 
 func (s *Server) releaseJudgeAdmission(admission *queue.Admission) {

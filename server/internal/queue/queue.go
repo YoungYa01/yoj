@@ -17,7 +17,6 @@ type DispatcherStats struct {
 type Dispatcher struct {
 	gate             *CapacityGate
 	publisher        *RabbitPublisher
-	publishTimeout   time.Duration
 	retryAfterSecond int
 }
 
@@ -35,7 +34,6 @@ func NewDispatcher(rdb *redis.Client, cfg config.Config) (*Dispatcher, error) {
 			cfg.JudgeAdmissionTTL(),
 		),
 		publisher:        publisher,
-		publishTimeout:   cfg.RabbitPublishTimeout(),
 		retryAfterSecond: cfg.JudgeRetryAfterSecond,
 	}, nil
 }
@@ -56,14 +54,7 @@ func (d *Dispatcher) Publish(ctx context.Context, admission *Admission, submissi
 		EnqueuedAt:    time.Now(),
 	}
 
-	publishCtx := ctx
-	if _, ok := ctx.Deadline(); !ok && d.publishTimeout > 0 {
-		var cancel context.CancelFunc
-		publishCtx, cancel = context.WithTimeout(ctx, d.publishTimeout)
-		defer cancel()
-	}
-
-	return d.publisher.PublishTask(publishCtx, task)
+	return d.publisher.PublishTask(ctx, task)
 }
 
 func (d *Dispatcher) Release(ctx context.Context, admission *Admission) error {

@@ -19,6 +19,9 @@ func Connect(ctx context.Context, cfg config.Config) (*gorm.DB, error) {
 	}
 	defer rootDB.Close()
 
+	rootDB.SetMaxOpenConns(1)
+	rootDB.SetMaxIdleConns(1)
+
 	if err := rootDB.PingContext(ctx); err != nil {
 		return nil, err
 	}
@@ -31,7 +34,26 @@ func Connect(ctx context.Context, cfg config.Config) (*gorm.DB, error) {
 		return nil, err
 	}
 
-	return gorm.Open(mysql.Open(cfg.DSN()), &gorm.Config{
+	db, err := gorm.Open(mysql.Open(cfg.DSN()), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Warn),
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+
+	sqlDB.SetMaxOpenConns(cfg.DBMaxOpenConns)
+	sqlDB.SetMaxIdleConns(cfg.DBMaxIdleConns)
+	sqlDB.SetConnMaxLifetime(cfg.DBConnMaxLifetime())
+	sqlDB.SetConnMaxIdleTime(cfg.DBConnMaxIdleTime())
+
+	if err := sqlDB.PingContext(ctx); err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }

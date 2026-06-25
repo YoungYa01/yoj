@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"strings"
 
@@ -71,17 +72,31 @@ func (s *Server) submitProblem(c *gin.Context) {
 		Status:    model.StatusPending,
 	}
 
-	err := s.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(&submission).Error; err != nil {
-			return err
-		}
-		return tx.Model(&model.Problem{}).Where("id = ?", problem.ID).
-			UpdateColumn("submit_count", gorm.Expr("submit_count + ?", 1)).Error
-	})
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "create submission failed"})
+	// A submission insert and the problem counter update must not share one
+	// transaction. With many concurrent submissions to the same problem,
+	// the foreign-key check on submissions.problem_id takes a shared lock on
+	// the problem row while the counter update needs an exclusive lock. Keeping
+	// both statements in one transaction creates a lock-upgrade deadlock.
+	//
+	// The submission row is authoritative. submit_count is a derived counter,
+	// so it is updated afterwards in its own short autocommit statement.
+	if err := s.db.
+		Session(&gorm.Session{SkipDefaultTransaction: true}).
+		Create(&submission).Error; err != nil {
+		log.Printf(
+			"create submission failed: user_id=%d problem_id=%d error=%v",
+			user.ID,
+			problem.ID,
+			err,
+		)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "create submission failed",
+			"code":  "SUBMISSION_CREATE_FAILED",
+		})
 		return
 	}
+
+	s.incrementProblemSubmitCount(problem.ID)
 
 	if err := s.publishJudgeSubmission(admission, submission.ID); err != nil {
 		_ = s.db.Model(&submission).Updates(map[string]any{
@@ -101,6 +116,33 @@ func (s *Server) submitProblem(c *gin.Context) {
 	submission.User = *user
 	submission.Problem = problem
 	c.JSON(http.StatusCreated, gin.H{"submission": toSubmissionResponse(submission, false, false, user.Role == model.RoleAdmin, true)})
+}
+
+func (s *Server) incrementProblemSubmitCount(problemID uint) {
+	result := s.db.
+		Session(&gorm.Session{SkipDefaultTransaction: true}).
+		Model(&model.Problem{}).
+		Where("id = ?", problemID).
+		UpdateColumn("submit_count", gorm.Expr("submit_count + ?", 1))
+
+	if result.Error != nil {
+		// submit_count is a derived statistic. A counter failure must never make
+		// an already-created submission disappear from the user.
+		log.Printf(
+			"increment problem submit_count failed: problem_id=%d error=%v",
+			problemID,
+			result.Error,
+		)
+		return
+	}
+
+	if result.RowsAffected != 1 {
+		log.Printf(
+			"increment problem submit_count affected unexpected rows: problem_id=%d rows=%d",
+			problemID,
+			result.RowsAffected,
+		)
+	}
 }
 
 func (s *Server) listSubmissions(c *gin.Context) {

@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"sort"
 	"strings"
@@ -258,18 +259,6 @@ func (s *Server) submitContestProblem(c *gin.Context) {
 		return
 	}
 
-	admission, ok := s.acquireJudgeAdmission(c)
-	if !ok {
-		return
-	}
-
-	published := false
-	defer func() {
-		if !published {
-			s.releaseJudgeAdmission(admission)
-		}
-	}()
-
 	var req submitRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
@@ -289,6 +278,18 @@ func (s *Server) submitContestProblem(c *gin.Context) {
 		return
 	}
 
+	admission, ok := s.acquireJudgeAdmission(c)
+	if !ok {
+		return
+	}
+
+	published := false
+	defer func() {
+		if !published {
+			s.releaseJudgeAdmission(admission)
+		}
+	}()
+
 	submission := model.Submission{
 		UserID:    user.ID,
 		ProblemID: problemID,
@@ -297,17 +298,24 @@ func (s *Server) submitContestProblem(c *gin.Context) {
 		Code:      req.Code,
 		Status:    model.StatusPending,
 	}
-	err := s.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(&submission).Error; err != nil {
-			return err
-		}
-		return tx.Model(&model.Problem{}).Where("id = ?", problemID).
-			UpdateColumn("submit_count", gorm.Expr("submit_count + ?", 1)).Error
-	})
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "create submission failed"})
+	if err := s.db.
+		Session(&gorm.Session{SkipDefaultTransaction: true}).
+		Create(&submission).Error; err != nil {
+		log.Printf(
+			"create contest submission failed: user_id=%d contest_id=%d problem_id=%d error=%v",
+			user.ID,
+			contest.ID,
+			problemID,
+			err,
+		)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "create submission failed",
+			"code":  "SUBMISSION_CREATE_FAILED",
+		})
 		return
 	}
+
+	s.incrementProblemSubmitCount(problemID)
 
 	if err := s.publishJudgeSubmission(admission, submission.ID); err != nil {
 		_ = s.db.Model(&submission).Updates(map[string]any{

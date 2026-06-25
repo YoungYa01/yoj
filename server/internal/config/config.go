@@ -9,15 +9,19 @@ import (
 )
 
 type Config struct {
-	HTTPAddr      string
-	DBHost        string
-	DBPort        string
-	DBUser        string
-	DBPassword    string
-	DBName        string
-	RedisAddr     string
-	RedisPassword string
-	RedisDB       int
+	HTTPAddr                string
+	DBHost                  string
+	DBPort                  string
+	DBUser                  string
+	DBPassword              string
+	DBName                  string
+	DBMaxOpenConns          int
+	DBMaxIdleConns          int
+	DBConnMaxLifetimeSecond int
+	DBConnMaxIdleTimeSecond int
+	RedisAddr               string
+	RedisPassword           string
+	RedisDB                 int
 
 	JWTSecret      string
 	JWTExpireHours int
@@ -37,6 +41,7 @@ type Config struct {
 	RabbitJudgeDeadQueue   string
 	RabbitQueueType        string
 	RabbitPublishTimeoutMS int
+	RabbitPublishChannels  int
 
 	JudgeCapacityKey        string
 	JudgeMaxInflight        int
@@ -59,15 +64,19 @@ func Load() Config {
 	loadDotEnv("server/.env")
 
 	return Config{
-		HTTPAddr:      getenv("YOJ_HTTP_ADDR", ":8080"),
-		DBHost:        getenv("YOJ_DB_HOST", "127.0.0.1"),
-		DBPort:        getenv("YOJ_DB_PORT", "3306"),
-		DBUser:        getenv("YOJ_DB_USER", "root"),
-		DBPassword:    getenv("YOJ_DB_PASSWORD", "root"),
-		DBName:        getenv("YOJ_DB_NAME", "yoj"),
-		RedisAddr:     getenv("YOJ_REDIS_ADDR", "127.0.0.1:6379"),
-		RedisPassword: getenv("YOJ_REDIS_PASSWORD", ""),
-		RedisDB:       getenvInt("YOJ_REDIS_DB", 0),
+		HTTPAddr:                getenv("YOJ_HTTP_ADDR", ":8080"),
+		DBHost:                  getenv("YOJ_DB_HOST", "127.0.0.1"),
+		DBPort:                  getenv("YOJ_DB_PORT", "3306"),
+		DBUser:                  getenv("YOJ_DB_USER", "root"),
+		DBPassword:              getenv("YOJ_DB_PASSWORD", "root"),
+		DBName:                  getenv("YOJ_DB_NAME", "yoj"),
+		DBMaxOpenConns:          positiveInt(getenvInt("YOJ_DB_MAX_OPEN_CONNS", 30), 30),
+		DBMaxIdleConns:          nonNegativeInt(getenvInt("YOJ_DB_MAX_IDLE_CONNS", 10), 10),
+		DBConnMaxLifetimeSecond: positiveInt(getenvInt("YOJ_DB_CONN_MAX_LIFETIME_SECONDS", 1800), 1800),
+		DBConnMaxIdleTimeSecond: positiveInt(getenvInt("YOJ_DB_CONN_MAX_IDLE_TIME_SECONDS", 300), 300),
+		RedisAddr:               getenv("YOJ_REDIS_ADDR", "127.0.0.1:6379"),
+		RedisPassword:           getenv("YOJ_REDIS_PASSWORD", ""),
+		RedisDB:                 getenvInt("YOJ_REDIS_DB", 0),
 
 		JWTSecret:      getenv("YOJ_JWT_SECRET", "yoj-local-dev-secret"),
 		JWTExpireHours: getenvInt("YOJ_JWT_EXPIRE_HOURS", 168),
@@ -85,6 +94,7 @@ func Load() Config {
 		RabbitJudgeDeadQueue:   getenv("YOJ_RABBITMQ_JUDGE_DEAD_QUEUE", "yoj.judge.tasks.dead"),
 		RabbitQueueType:        strings.ToLower(getenv("YOJ_RABBITMQ_QUEUE_TYPE", "classic")),
 		RabbitPublishTimeoutMS: getenvInt("YOJ_RABBITMQ_PUBLISH_TIMEOUT_MS", 5000),
+		RabbitPublishChannels:  positiveInt(getenvInt("YOJ_RABBITMQ_PUBLISH_CHANNELS", 8), 8),
 
 		JudgeCapacityKey:        getenv("YOJ_JUDGE_CAPACITY_KEY", "yoj:judge:capacity"),
 		JudgeMaxInflight:        positiveInt(getenvInt("YOJ_JUDGE_MAX_INFLIGHT", 200), 200),
@@ -119,6 +129,14 @@ func (c Config) JudgeAdmissionTTL() time.Duration {
 
 func (c Config) RabbitPublishTimeout() time.Duration {
 	return time.Duration(c.RabbitPublishTimeoutMS) * time.Millisecond
+}
+
+func (c Config) DBConnMaxLifetime() time.Duration {
+	return time.Duration(c.DBConnMaxLifetimeSecond) * time.Second
+}
+
+func (c Config) DBConnMaxIdleTime() time.Duration {
+	return time.Duration(c.DBConnMaxIdleTimeSecond) * time.Second
 }
 
 func getenv(key, fallback string) string {
